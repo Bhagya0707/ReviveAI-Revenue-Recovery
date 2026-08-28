@@ -1,0 +1,5 @@
+faker
+python-dotenv
+google-genai
+fastapi
+uvicorn
