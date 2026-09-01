@@ -1,6 +1,7 @@
+import os
 import sqlite3
 
-DB_PATH = "recovery.db"
+DB_PATH = os.getenv("RECOVERY_DB_PATH", "recovery.db")
 
 def get_connection():
     conn = sqlite3.connect(DB_PATH)

@@ -1,6 +1,10 @@
+from datetime import datetime, timezone
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from database import get_connection
+from outreach import build_outreach
+from recovery_simulator import simulate_recovery
 from strategy_simulator import compare_strategies
 
 app = FastAPI(title="AI Revenue Recovery API")
@@ -8,7 +12,8 @@ app = FastAPI(title="AI Revenue Recovery API")
 # Allow the React frontend (running on a different port) to call this API
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # fine for a hackathon demo; would be locked down in production
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origin_regex=r"https?://.*",  # production frontends (Vercel previews etc.)
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -93,8 +98,85 @@ def get_event_detail(event_id: str):
 
     conn.close()
 
+    event = dict(event)
+
     return {
-        "event": dict(event),
+        "event": event,
+        "audit_trail": [dict(a) for a in audit_trail],
+        "outreach": build_outreach(event),
+    }
+
+
+@app.post("/api/recovery/{event_id}/execute")
+def execute_recovery(event_id: str):
+    """Run the guardrail-approved recovery action and append the audit trail."""
+    conn = get_connection()
+
+    row = conn.execute("SELECT * FROM events WHERE event_id = ?", (event_id,)).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    event = dict(row)
+
+    if event["action_status"] != "executed":
+        conn.close()
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Guardrails marked this case as '{event['action_status']}'; "
+                "only approved cases can be executed."
+            ),
+        )
+
+    outreach = build_outreach(event)
+    result, recovered_amount, adjusted_probability = simulate_recovery(event)
+    now = datetime.now(timezone.utc).isoformat()
+
+    logs = [
+        (
+            "EXECUTION_STARTED",
+            f"Recovery workflow triggered from dashboard for action "
+            f"'{event['recommended_action']}' (Rs.{event['amount']:,.2f} at risk).",
+        ),
+        (
+            "OUTREACH_SENT",
+            f"{outreach['language']} outreach dispatched via {outreach['channel']}: "
+            f"{outreach['message']}",
+        ),
+        (
+            "EXECUTION_RESULT",
+            f"Outcome: {result} | Recovered: Rs.{recovered_amount:,.2f} | "
+            f"Adjusted probability: {adjusted_probability:.2f}",
+        ),
+    ]
+
+    for step, detail in logs:
+        conn.execute(
+            "INSERT INTO audit_log (event_id, timestamp, step, detail) VALUES (?, ?, ?, ?)",
+            (event_id, now, step, detail),
+        )
+
+    conn.execute(
+        "UPDATE events SET recovery_result = ?, recovered_amount = ? WHERE event_id = ?",
+        (result, recovered_amount, event_id),
+    )
+    conn.commit()
+
+    updated = dict(conn.execute("SELECT * FROM events WHERE event_id = ?", (event_id,)).fetchone())
+    audit_trail = conn.execute(
+        "SELECT * FROM audit_log WHERE event_id = ? ORDER BY log_id", (event_id,)
+    ).fetchall()
+    conn.close()
+
+    return {
+        "success": True,
+        "event_id": event_id,
+        "recovery_result": result,
+        "recovered_amount": round(recovered_amount, 2),
+        "adjusted_probability": round(adjusted_probability, 2),
+        "outreach": outreach,
+        "event": updated,
         "audit_trail": [dict(a) for a in audit_trail],
     }
 
@@ -102,6 +184,8 @@ def get_event_detail(event_id: str):
 @app.get("/")
 def root():
     return {"message": "AI Revenue Recovery API is running"}
+
+
 @app.get("/api/strategy-comparison")
 def get_strategy_comparison():
     return compare_strategies()
