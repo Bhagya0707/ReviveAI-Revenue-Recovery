@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: reviveai-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: RECOVERY_DB_PATH
+        value: /app/recovery.db
