@@ -16,6 +16,7 @@ import {
 } from "recharts";
 
 const API_URL = "https://reviveai-revenue-recovery.onrender.com";
+const RAZORPAY_KEY_ID = "zp_test_TXAlnoCwvrNzp6";
 
 const NAV_ITEMS = [
   { id: "overview", icon: "⌂", label: "Overview" },
@@ -155,7 +156,13 @@ function Badge({ children, type = "" }) {
   return <span className={`badge ${type}`}>{children}</span>;
 }
 
-function Modal({ event, onClose }) {
+function Modal({
+  event,
+  onClose,
+  onPay,
+  paymentLoading,
+  paymentMessage,
+}) {
   if (!event) return null;
 
   return (
@@ -268,11 +275,46 @@ function Modal({ event, onClose }) {
           )}
         </div>
 
+        {paymentMessage && (
+          <div
+            style={{
+              margin: "0 22px",
+              padding: "11px 13px",
+              borderRadius: "8px",
+              border: "1px solid rgba(59, 227, 155, 0.2)",
+              background: "rgba(59, 227, 155, 0.06)",
+              color: "#5ce4a8",
+              fontSize: "10px",
+            }}
+          >
+            {paymentMessage}
+          </div>
+        )}
+
         <div className="modal-footer">
           <span>Recorded {formatDate(event.timestamp)}</span>
-          <button className="primary-btn" onClick={onClose}>
-            Close
-          </button>
+
+          <div style={{ display: "flex", gap: "8px" }}>
+            {event.recovery_result === "not_attempted" && (
+              <button
+                className="primary-btn"
+                onClick={() => onPay(event)}
+                disabled={paymentLoading}
+                style={{
+                  opacity: paymentLoading ? 0.6 : 1,
+                  cursor: paymentLoading ? "wait" : "pointer",
+                }}
+              >
+                {paymentLoading
+                  ? "Opening checkout..."
+                  : "Recover Payment"}
+              </button>
+            )}
+
+            <button className="primary-btn" onClick={onClose}>
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1166,8 +1208,10 @@ function Analytics({ events, summary }) {
   );
 }
 
-export default function App() {
+ export default function App() {
   const [activePage, setActivePage] = useState("overview");
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentMessage, setPaymentMessage] = useState("");
   const [summary, setSummary] = useState(FALLBACK_SUMMARY);
   const [events, setEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -1241,7 +1285,121 @@ export default function App() {
       mounted = false;
     };
   }, []);
+  async function startRecoveryPayment(event) {
+    try {
+      setPaymentLoading(true);
+      setPaymentMessage("");
 
+      const orderResponse = await fetch(
+        `${API_URL}/api/razorpay/create-order`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+  amount: 100,
+  event_id: event.event_id,
+  customer_id: event.customer_id,
+}),
+        }
+      );
+
+      if (!orderResponse.ok) {
+        throw new Error("Unable to create Razorpay order");
+      }
+
+      const order = await orderResponse.json();
+
+      if (!window.Razorpay) {
+        const script = document.createElement("script");
+        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+
+        await new Promise((resolve, reject) => {
+          script.onload = resolve;
+          script.onerror = reject;
+          document.body.appendChild(script);
+        });
+      }
+
+      const options = {
+        key: RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: order.currency,
+        name: "ReviveAI",
+        description: "Revenue Recovery",
+        order_id: order.id,
+
+        handler: async function (response) {
+          try {
+            const verifyResponse = await fetch(
+              `${API_URL}/api/razorpay/verify-payment`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  event_id: event.event_id,
+                  razorpay_payment_id:
+                    response.razorpay_payment_id,
+                  razorpay_order_id:
+                    response.razorpay_order_id,
+                  razorpay_signature:
+                    response.razorpay_signature,
+                }),
+              }
+            );
+
+            const result = await verifyResponse.json();
+
+           if (verifyResponse.ok) {
+  setPaymentMessage(
+    `✓ Payment recovered successfully — ${response.razorpay_payment_id}`
+  );
+
+  setPaymentLoading(false);
+} else {
+  setPaymentMessage(
+    result.detail || "Payment verification failed"
+  );
+}
+          } catch (error) {
+            console.error(error);
+            setPaymentMessage("Payment completed, but verification failed.");
+          }
+        },
+
+        modal: {
+          ondismiss: function () {
+            setPaymentLoading(false);
+          },
+        },
+
+        theme: {
+          color: "#6558ef",
+        },
+      };
+
+      const razorpay = new window.Razorpay(options);
+
+      razorpay.on("payment.failed", function (response) {
+        console.error("Razorpay payment failed:", response.error);
+
+        setPaymentMessage(
+          `Payment failed: ${response.error.description || "Transaction failed"}`
+        );
+
+        setPaymentLoading(false);
+      });
+
+      razorpay.open();
+    } catch (error) {
+      console.error("Razorpay error:", error);
+      setPaymentMessage(error.message || "Unable to start payment");
+      setPaymentLoading(false);
+    }
+  }
   function renderPage() {
     if (loading && events.length === 0) {
       return (
@@ -2641,11 +2799,16 @@ export default function App() {
         </aside>
 
         <main className="main">{renderPage()}</main>
-
-        <Modal
-          event={selectedEvent}
-          onClose={() => setSelectedEvent(null)}
-        />
+<Modal
+  event={selectedEvent}
+  onClose={() => {
+    setSelectedEvent(null);
+    setPaymentMessage("");
+  }}
+  onPay={startRecoveryPayment}
+  paymentLoading={paymentLoading}
+  paymentMessage={paymentMessage}
+/>
       </div>
     </>
   );
