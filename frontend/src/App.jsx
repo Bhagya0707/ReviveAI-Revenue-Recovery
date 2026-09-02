@@ -16,7 +16,7 @@ import {
 } from "recharts";
 
 const API_URL = "https://reviveai-revenue-recovery.onrender.com";
-const RAZORPAY_KEY_ID = "zp_test_TXAlnoCwvrNzp6";
+const RAZORPAY_KEY_ID = "rzp_test_TXAlnoCwvrNzp6";
 
 const NAV_ITEMS = [
   { id: "overview", icon: "⌂", label: "Overview" },
