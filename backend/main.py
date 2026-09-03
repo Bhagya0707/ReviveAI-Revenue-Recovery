@@ -377,7 +377,24 @@ def verify_razorpay_payment(payload: dict = Body(...)):
             )
 
             conn.commit()
-            conn.close()
+                    # Update the recovery outcome for adaptive learning
+        conn.execute(
+            """
+            UPDATE events
+            SET
+                recovery_result = 'recovered',
+                recovered_amount = ?,
+                action_status = 'executed'
+            WHERE event_id = ?
+            """,
+            (
+                payment.get("amount", 0) / 100,
+                event_id
+            )
+        )
+
+        conn.commit()
+        conn.close()
 
         # ----------------------------------------------------
         # Successful response

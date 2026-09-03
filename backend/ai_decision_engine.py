@@ -4,6 +4,7 @@ import time
 from dotenv import load_dotenv
 from google import genai
 from database import get_connection
+from scoring_engine import get_adaptive_strategy_performance
 
 # ============================================================
 # CONFIGURATION
@@ -81,6 +82,7 @@ Return exactly this structure:
 # ============================================================
 
 def build_case_prompt(event):
+    adaptive_performance = get_adaptive_strategy_performance()
 
     return f"""
 Analyze the following revenue recovery case.
@@ -119,7 +121,14 @@ Calculated recovery probability:
 
 Priority:
 {event['priority']}
+Historical recovery strategy performance:
 
+{json.dumps(adaptive_performance)}
+
+Use this historical performance as an additional signal when choosing
+the recommended action. Prefer strategies with stronger observed
+recovery performance when they are otherwise appropriate for this case.
+Do not ignore the case-specific information or the guardrails.
 Based on all of the above:
 
 1. Diagnose the reason revenue is at risk.

@@ -1,4 +1,49 @@
+
 from database import get_connection
+
+
+def get_adaptive_strategy_performance():
+    """
+    Learn observed recovery performance from existing completed events.
+
+    Returns success rates for each recovery action.
+    Uses existing events only; does not modify the database.
+    """
+    conn = get_connection()
+
+    rows = conn.execute("""
+        SELECT
+            recommended_action,
+            COUNT(*) AS total,
+            SUM(
+                CASE
+                    WHEN recovery_result = 'recovered'
+                    THEN 1
+                    ELSE 0
+                END
+            ) AS successful
+        FROM events
+        WHERE recommended_action IS NOT NULL
+          AND recovery_result IN ('recovered', 'failed')
+        GROUP BY recommended_action
+    """).fetchall()
+
+    conn.close()
+
+    performance = {}
+
+    for row in rows:
+        total = row["total"]
+        successful = row["successful"] or 0
+
+        if total > 0:
+            performance[row["recommended_action"]] = round(
+                successful / total,
+                2
+            )
+
+    return performance
+
 
 def calculate_recovery_probability(event):
     """
@@ -6,6 +51,9 @@ def calculate_recovery_probability(event):
     Simple weighted formula - each factor nudges probability up or down.
     """
     score = 0.5  # baseline
+
+    # Adaptive feedback from historical recovery outcomes
+    adaptive_performance = get_adaptive_strategy_performance()
 
     # Previous payment behavior is the strongest signal
     score += (event["previous_success_rate"] - 0.5) * 0.4
@@ -19,22 +67,41 @@ def calculate_recovery_probability(event):
     elif event["days_since_last_payment"] > 30:
         score -= 0.08
 
-    # High-value customers tend to be more recoverable (better support, more will to fix)
+    # High-value customers tend to be more recoverable
     if event["customer_lifetime_value"] > 100000:
         score += 0.1
     elif event["customer_lifetime_value"] < 5000:
         score -= 0.05
 
     # Certain failure reasons are inherently more/less recoverable
-    temporary_reasons = ["network_timeout", "otp_failed", "session_timeout"]
-    hard_reasons = ["disputed_amount", "mandate_revoked", "no_response"]
+    temporary_reasons = [
+        "network_timeout",
+        "otp_failed",
+        "session_timeout"
+    ]
+
+    hard_reasons = [
+        "disputed_amount",
+        "mandate_revoked",
+        "no_response"
+    ]
 
     if event["failure_reason"] in temporary_reasons:
         score += 0.15
     elif event["failure_reason"] in hard_reasons:
         score -= 0.2
 
-    # Clamp between 0.05 and 0.97 (never fully 0 or 1 - keeps it realistic)
+    # Small bounded adaptive adjustment
+    # Historical strategy performance influences the score,
+    # but never dominates the original scoring rules.
+    action = event.get("recommended_action")
+
+    if action in adaptive_performance:
+        observed_rate = adaptive_performance[action]
+        adaptive_adjustment = (observed_rate - 0.50) * 0.10
+        score += adaptive_adjustment
+
+    # Clamp between 0.05 and 0.97
     return round(max(0.05, min(0.97, score)), 2)
 
 
@@ -43,8 +110,12 @@ def calculate_risk_score(event):
     Returns a 0-100 score representing how much this case matters.
     Based on amount, weighted slightly by customer lifetime value.
     """
-    amount_component = min(event["amount"] / 750, 80)  # scales amount into a 0-80 range
-    ltv_component = min(event["customer_lifetime_value"] / 10000, 20)  # 0-20 range
+    amount_component = min(event["amount"] / 750, 80)
+    ltv_component = min(
+        event["customer_lifetime_value"] / 10000,
+        20
+    )
+
     return round(amount_component + ltv_component, 1)
 
 
@@ -74,18 +145,28 @@ def score_all_events():
 
         recovery_probability = calculate_recovery_probability(event_dict)
         risk_score = calculate_risk_score(event_dict)
-        priority = calculate_priority(event_dict["amount"], recovery_probability)
+        priority = calculate_priority(
+            event_dict["amount"],
+            recovery_probability
+        )
 
         cursor.execute("""
             UPDATE events
             SET recovery_probability = ?, risk_score = ?, priority = ?
             WHERE event_id = ?
-        """, (recovery_probability, risk_score, priority, event_dict["event_id"]))
+        """, (
+            recovery_probability,
+            risk_score,
+            priority,
+            event_dict["event_id"]
+        ))
 
     conn.commit()
     conn.close()
+
     print(f"Scored {len(events)} events.")
 
 
 if __name__ == "__main__":
     score_all_events()
+
