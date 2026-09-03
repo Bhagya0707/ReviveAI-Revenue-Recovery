@@ -1,3 +1,4 @@
+
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ResponsiveContainer,
@@ -21,6 +22,7 @@ const RAZORPAY_KEY_ID = "rzp_test_TXAlnoCwvrNzp6";
 const NAV_ITEMS = [
   { id: "overview", icon: "⌂", label: "Overview" },
   { id: "queue", icon: "☷", label: "Recovery Queue" },
+  { id: "recovered", icon: "✓", label: "Recovered Payments" },
   { id: "strategy", icon: "↗", label: "Strategy Simulator" },
   { id: "audit", icon: "◇", label: "Audit & Guardrails" },
   { id: "analytics", icon: "▥", label: "Analytics" },
@@ -35,36 +37,37 @@ const FALLBACK_SUMMARY = {
   priority_breakdown: [],
   failure_reason_breakdown: [],
 };
-
 function money(value) {
   const n = Number(value || 0);
 
   if (n >= 10000000) {
-    return `₹${(n / 10000000).toFixed(2)}Cr`;
+    return "Rs." + (n / 10000000).toFixed(2) + "Cr";
   }
 
   if (n >= 100000) {
-    return `₹${(n / 100000).toFixed(2)}L`;
+    return "Rs." + (n / 100000).toFixed(2) + "L";
   }
 
   if (n >= 1000) {
-    return `₹${(n / 1000).toFixed(1)}K`;
+    return "Rs." + (n / 1000).toFixed(1) + "K";
   }
 
-  return `₹${Math.round(n).toLocaleString("en-IN")}`;
+  return "Rs." + Math.round(n).toLocaleString("en-IN");
 }
 
 function moneyFull(value) {
-  return `₹${Number(value || 0).toLocaleString("en-IN", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
+  return (
+    "Rs." +
+    Number(value || 0).toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
+  );
 }
-
+  
 function percent(value) {
-  return `${Number(value || 0).toFixed(1)}%`;
+  return Number(value || 0).toFixed(1) + "%";
 }
-
 function normalizeEvent(event) {
   return {
     ...event,
@@ -144,7 +147,7 @@ function Icon({ children }) {
 
 function StatCard({ label, value, description, tone }) {
   return (
-    <div className={`stat-card ${tone || ""}`}>
+    <div className={"stat-card " + (tone || "")}>
       <div className="stat-label">{label}</div>
       <div className="stat-value">{value}</div>
       <div className="stat-description">{description}</div>
@@ -153,7 +156,7 @@ function StatCard({ label, value, description, tone }) {
 }
 
 function Badge({ children, type = "" }) {
-  return <span className={`badge ${type}`}>{children}</span>;
+  return <span className={"badge " + type}>{children}</span>;
 }
 
 function Modal({
@@ -305,9 +308,7 @@ function Modal({
                   cursor: paymentLoading ? "wait" : "pointer",
                 }}
               >
-                {paymentLoading
-                  ? "Opening checkout..."
-                  : "Recover Payment"}
+                {paymentLoading ? "Opening checkout..." : "Recover Payment"}
               </button>
             )}
 
@@ -332,6 +333,7 @@ function Overview({
     return [...events]
       .sort((a, b) => {
         const priorityOrder = { HIGH: 3, MEDIUM: 2, LOW: 1 };
+
         return (
           (priorityOrder[b.priority] || 0) -
             (priorityOrder[a.priority] || 0) ||
@@ -459,9 +461,11 @@ function Overview({
               <span>
                 <b>{statusCounts.executed}</b> Executed
               </span>
+
               <span>
                 <b>{statusCounts.escalated}</b> Escalated
               </span>
+
               <span>
                 <b>{statusCounts.stopped}</b> Stopped
               </span>
@@ -485,16 +489,17 @@ function Overview({
 
           <div className="additional-panel">
             <div className="policy-label">ADDITIONAL RECOVERY</div>
+
             <div className="additional-value">
               +{money(additionalRecovery)}
             </div>
 
             <div className="improvement">
               {expectedRecovery > 0
-                ? `${((additionalRecovery / expectedRecovery) * 100).toFixed(
-                    1
-                  )}%`
-                : "0%"}{" "}
+  ? String(
+      ((additionalRecovery / expectedRecovery) * 100).toFixed(1)
+    ) + "%"
+  : "0%"}{" "}
               potential improvement
             </div>
           </div>
@@ -528,6 +533,7 @@ function Overview({
               <div className="priority-main">
                 <div className="priority-customer">
                   {event.customer_id}
+
                   <Badge type={priorityClass(event.priority)}>
                     {event.priority}
                   </Badge>
@@ -552,7 +558,9 @@ function Overview({
           ))}
 
           {topCases.length === 0 && (
-            <div className="empty-state">No recovery opportunities found.</div>
+            <div className="empty-state">
+              No recovery opportunities found.
+            </div>
           )}
         </div>
       </section>
@@ -641,8 +649,12 @@ function Queue({ events, onSelectEvent }) {
     <>
       <header className="page-header">
         <div>
-          <div className="eyebrow">AI OPERATIONS / RECOVERY QUEUE</div>
+          <div className="eyebrow">
+            AI OPERATIONS / RECOVERY QUEUE
+          </div>
+
           <h1>Recovery Queue</h1>
+
           <p>
             Review every revenue recovery opportunity detected by the agent.
           </p>
@@ -658,14 +670,20 @@ function Queue({ events, onSelectEvent }) {
           placeholder="Search customer, event or failure reason..."
         />
 
-        <select value={priority} onChange={(e) => setPriority(e.target.value)}>
+        <select
+          value={priority}
+          onChange={(e) => setPriority(e.target.value)}
+        >
           <option value="ALL">All priorities</option>
           <option value="HIGH">High</option>
           <option value="MEDIUM">Medium</option>
           <option value="LOW">Low</option>
         </select>
 
-        <select value={status} onChange={(e) => setStatus(e.target.value)}>
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+        >
           <option value="ALL">All statuses</option>
           <option value="executed">Executed</option>
           <option value="escalated">Escalated</option>
@@ -712,7 +730,9 @@ function Queue({ events, onSelectEvent }) {
                     <small>{prettyReason(event.failure_reason)}</small>
                   </td>
 
-                  <td className="amount-cell">{moneyFull(event.amount)}</td>
+                  <td className="amount-cell">
+                    {moneyFull(event.amount)}
+                  </td>
 
                   <td>{event.risk_score.toFixed(1)}</td>
 
@@ -722,11 +742,15 @@ function Queue({ events, onSelectEvent }) {
                         style={{
                           width: `${Math.min(
                             100,
-                            Math.max(0, event.recovery_probability * 100)
+                            Math.max(
+                              0,
+                              event.recovery_probability * 100
+                            )
                           )}%`,
                         }}
                       />
                     </div>
+
                     {percent(event.recovery_probability * 100)}
                   </td>
 
@@ -736,10 +760,16 @@ function Queue({ events, onSelectEvent }) {
                     </Badge>
                   </td>
 
-                  <td>{actionLabel(event.recommended_action)}</td>
+                  <td>
+                    {actionLabel(event.recommended_action)}
+                  </td>
 
                   <td>
-                    <Badge type={String(event.action_status).toLowerCase()}>
+                    <Badge
+                      type={String(
+                        event.action_status
+                      ).toLowerCase()}
+                    >
                       {statusLabel(event.action_status)}
                     </Badge>
                   </td>
@@ -750,9 +780,122 @@ function Queue({ events, onSelectEvent }) {
         </div>
 
         {filtered.length === 0 && (
-          <div className="empty-state">No cases match the selected filters.</div>
+          <div className="empty-state">
+            No cases match the selected filters.
+          </div>
         )}
       </div>
+    </>
+  );
+}
+
+function RecoveredPayments({ payments, loading }) {
+  return (
+    <>
+      <header className="page-header">
+        <div>
+          <div className="eyebrow">
+            AI OPERATIONS / RECOVERY
+          </div>
+
+          <h1>Recovered Payments</h1>
+
+          <p>
+            View customers and payments successfully recovered through
+            ReviveAI.
+          </p>
+        </div>
+
+        <div className="count-pill">
+          {payments.length} recovered
+        </div>
+      </header>
+
+      <section className="table-card">
+        <div className="table-top">
+          <div>
+            <div className="eyebrow">PAYMENT HISTORY</div>
+            <h2>Successful recovery transactions</h2>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="empty-state">
+            Loading recovered payments...
+          </div>
+        ) : payments.length === 0 ? (
+          <div className="empty-state">
+            No successful Razorpay recoveries recorded yet.
+          </div>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Customer</th>
+                  <th>Event</th>
+                  <th>Payment ID</th>
+                  <th>Amount</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {payments.map((payment, index) => (
+                  <tr
+                    key={
+                      payment.payment_id ||
+                      payment.razorpay_payment_id ||
+                      `${payment.customer_id}-${index}`
+                    }
+                  >
+                    <td>
+                      <strong>
+                        {payment.customer_id || "Unknown"}
+                      </strong>
+                    </td>
+
+                    <td>
+                      {payment.event_id || "—"}
+                    </td>
+
+                    <td>
+                      <small
+                        style={{
+                          color: "#8f9aaa",
+                          fontSize: "9px",
+                        }}
+                      >
+                        {payment.payment_id ||
+                          payment.razorpay_payment_id ||
+                          "—"}
+                      </small>
+                    </td>
+
+                    <td className="amount-cell">
+                      {moneyFull(payment.amount)}
+                    </td>
+
+                    <td>
+                      {formatDate(
+                        payment.timestamp ||
+                          payment.date
+                      )}
+                    </td>
+
+                    <td>
+                      <Badge type="executed">
+                        Recovered
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </>
   );
 }
@@ -767,14 +910,19 @@ function Strategy({ events }) {
 
         return acc;
       },
-      { executed: 0, escalated: 0, stopped: 0 }
+      {
+        executed: 0,
+        escalated: 0,
+        stopped: 0,
+      }
     );
   }, [events]);
 
   const totalSelected = events
     .filter(
       (e) =>
-        e.action_status === "executed" || e.action_status === "escalated"
+        e.action_status === "executed" ||
+        e.action_status === "escalated"
     )
     .reduce((sum, e) => sum + e.amount, 0);
 
@@ -793,8 +941,12 @@ function Strategy({ events }) {
     <>
       <header className="page-header">
         <div>
-          <div className="eyebrow">AI OPERATIONS / STRATEGY</div>
+          <div className="eyebrow">
+            AI OPERATIONS / STRATEGY
+          </div>
+
           <h1>Strategy Simulator</h1>
+
           <p>
             Evaluate the recovery policy using the complete recovery dataset.
           </p>
@@ -804,14 +956,18 @@ function Strategy({ events }) {
       <section className="strategy-hero">
         <div>
           <div className="eyebrow">CURRENT POLICY</div>
+
           <h2>Bounded AI recovery strategy</h2>
+
           <p>
             The agent evaluates risk, recovery probability, retry history and
             guardrail conditions before selecting an action.
           </p>
         </div>
 
-        <div className="strategy-value">{money(totalSelected)}</div>
+        <div className="strategy-value">
+          {money(totalSelected)}
+        </div>
       </section>
 
       <div className="strategy-grid">
@@ -851,9 +1007,15 @@ function Strategy({ events }) {
         <div className="chart-container">
           <ResponsiveContainer width="100%" height={320}>
             <BarChart data={strategyData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#202631" />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="#202631"
+              />
+
               <XAxis dataKey="name" stroke="#7e899c" />
+
               <YAxis stroke="#7e899c" />
+
               <Tooltip
                 contentStyle={{
                   background: "#11151d",
@@ -861,7 +1023,11 @@ function Strategy({ events }) {
                   borderRadius: 10,
                 }}
               />
-              <Bar dataKey="value" radius={[8, 8, 0, 0]} />
+
+              <Bar
+                dataKey="value"
+                radius={[8, 8, 0, 0]}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -870,10 +1036,12 @@ function Strategy({ events }) {
       <section className="comparison-card">
         <div>
           <div className="eyebrow">RECOVERY OUTCOME</div>
+
           <h2>Selected value vs confirmed recovery</h2>
+
           <p>
-            These figures are calculated from the actual events returned by the
-            backend.
+            These figures are calculated from the actual events returned by
+            the backend.
           </p>
         </div>
 
@@ -885,7 +1053,9 @@ function Strategy({ events }) {
 
           <div>
             <span>Confirmed recovered</span>
-            <strong className="green-text">{money(totalRecovered)}</strong>
+            <strong className="green-text">
+              {money(totalRecovered)}
+            </strong>
           </div>
         </div>
       </section>
@@ -908,8 +1078,12 @@ function Audit({ events }) {
     <>
       <header className="page-header">
         <div>
-          <div className="eyebrow">AI OPERATIONS / GOVERNANCE</div>
+          <div className="eyebrow">
+            AI OPERATIONS / GOVERNANCE
+          </div>
+
           <h1>Audit & Guardrails</h1>
+
           <p>
             Inspect bounded decisions and human-approval escalation paths.
           </p>
@@ -944,7 +1118,9 @@ function Audit({ events }) {
         <div className="guardrail-grid">
           <div>
             <span className="guardrail-icon green-bg">✓</span>
+
             <strong>Bounded actions</strong>
+
             <p>
               Recovery attempts are restricted to predefined intervention
               types.
@@ -953,7 +1129,9 @@ function Audit({ events }) {
 
           <div>
             <span className="guardrail-icon amber-bg">!</span>
+
             <strong>Human escalation</strong>
+
             <p>
               High-value or uncertain cases can be routed for human approval.
             </p>
@@ -961,7 +1139,9 @@ function Audit({ events }) {
 
           <div>
             <span className="guardrail-icon red-bg">×</span>
+
             <strong>Stop conditions</strong>
+
             <p>
               Low-confidence or exhausted retry cases are prevented from
               repeated attempts.
@@ -995,14 +1175,27 @@ function Audit({ events }) {
               {events.slice(0, 25).map((event) => (
                 <tr key={event.event_id}>
                   <td>{event.customer_id}</td>
+
                   <td>{moneyFull(event.amount)}</td>
-                  <td>{actionLabel(event.recommended_action)}</td>
+
                   <td>
-                    <Badge type={String(event.action_status).toLowerCase()}>
+                    {actionLabel(event.recommended_action)}
+                  </td>
+
+                  <td>
+                    <Badge
+                      type={String(
+                        event.action_status
+                      ).toLowerCase()}
+                    >
                       {statusLabel(event.action_status)}
                     </Badge>
                   </td>
-                  <td>{prettyReason(event.recovery_result)}</td>
+
+                  <td>
+                    {prettyReason(event.recovery_result)}
+                  </td>
+
                   <td>{formatDate(event.timestamp)}</td>
                 </tr>
               ))}
@@ -1051,18 +1244,24 @@ function Analytics({ events, summary }) {
       }
     });
 
-    return Object.entries(map).map(([priority, count]) => ({
-      priority,
-      count,
-    }));
+    return Object.entries(map).map(
+      ([priority, count]) => ({
+        priority,
+        count,
+      })
+    );
   }, [events]);
 
   return (
     <>
       <header className="page-header">
         <div>
-          <div className="eyebrow">AI OPERATIONS / ANALYTICS</div>
+          <div className="eyebrow">
+            AI OPERATIONS / ANALYTICS
+          </div>
+
           <h1>Recovery Analytics</h1>
+
           <p>
             Analyze the complete revenue-risk dataset and recovery outcomes.
           </p>
@@ -1077,17 +1276,23 @@ function Analytics({ events, summary }) {
 
         <div>
           <span>Revenue at risk</span>
-          <strong>{money(summary.total_at_risk)}</strong>
+          <strong>
+            {money(summary.total_at_risk)}
+          </strong>
         </div>
 
         <div>
           <span>Recovered</span>
-          <strong>{money(summary.total_recovered)}</strong>
+          <strong>
+            {money(summary.total_recovered)}
+          </strong>
         </div>
 
         <div>
           <span>Recovery rate</span>
-          <strong>{percent(summary.recovery_rate)}</strong>
+          <strong>
+            {percent(summary.recovery_rate)}
+          </strong>
         </div>
       </div>
 
@@ -1095,7 +1300,10 @@ function Analytics({ events, summary }) {
         <section className="chart-card">
           <div className="section-heading">
             <div>
-              <div className="eyebrow">FAILURE ANALYSIS</div>
+              <div className="eyebrow">
+                FAILURE ANALYSIS
+              </div>
+
               <h2>Revenue by failure reason</h2>
             </div>
           </div>
@@ -1105,29 +1313,44 @@ function Analytics({ events, summary }) {
               <BarChart
                 data={failureData}
                 layout="vertical"
-                margin={{ left: 30, right: 20 }}
+                margin={{
+                  left: 30,
+                  right: 20,
+                }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="#202631" />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#202631"
+                />
+
                 <XAxis
                   type="number"
                   stroke="#7e899c"
                   tickFormatter={(v) => money(v)}
                 />
+
                 <YAxis
                   type="category"
                   dataKey="reason"
                   width={130}
                   stroke="#7e899c"
                 />
+
                 <Tooltip
-                  formatter={(value) => moneyFull(value)}
+                  formatter={(value) =>
+                    moneyFull(value)
+                  }
                   contentStyle={{
                     background: "#11151d",
                     border: "1px solid #29313d",
                     borderRadius: 10,
                   }}
                 />
-                <Bar dataKey="revenue" radius={[0, 6, 6, 0]} />
+
+                <Bar
+                  dataKey="revenue"
+                  radius={[0, 6, 6, 0]}
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -1136,7 +1359,10 @@ function Analytics({ events, summary }) {
         <section className="chart-card">
           <div className="section-heading">
             <div>
-              <div className="eyebrow">PRIORITY MIX</div>
+              <div className="eyebrow">
+                PRIORITY MIX
+              </div>
+
               <h2>Recovery priority distribution</h2>
             </div>
           </div>
@@ -1154,9 +1380,13 @@ function Analytics({ events, summary }) {
                   innerRadius={65}
                   paddingAngle={4}
                 >
-                  {priorityData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} />
-                  ))}
+                  {priorityData.map(
+                    (entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                      />
+                    )
+                  )}
                 </Pie>
 
                 <Tooltip
@@ -1177,7 +1407,10 @@ function Analytics({ events, summary }) {
       <section className="chart-card">
         <div className="section-heading">
           <div>
-            <div className="eyebrow">FAILURE TABLE</div>
+            <div className="eyebrow">
+              FAILURE TABLE
+            </div>
+
             <h2>Top revenue leakage reasons</h2>
           </div>
         </div>
@@ -1208,15 +1441,37 @@ function Analytics({ events, summary }) {
   );
 }
 
- export default function App() {
-  const [activePage, setActivePage] = useState("overview");
-  const [paymentLoading, setPaymentLoading] = useState(false);
-  const [paymentMessage, setPaymentMessage] = useState("");
-  const [summary, setSummary] = useState(FALLBACK_SUMMARY);
-  const [events, setEvents] = useState([]);
-  const [selectedEvent, setSelectedEvent] = useState(null);
-  const [apiConnected, setApiConnected] = useState(false);
-  const [loading, setLoading] = useState(true);
+export default function App() {
+  const [activePage, setActivePage] =
+    useState("overview");
+
+  const [paymentLoading, setPaymentLoading] =
+    useState(false);
+
+  const [paymentMessage, setPaymentMessage] =
+    useState("");
+
+  const [summary, setSummary] =
+    useState(FALLBACK_SUMMARY);
+
+  const [events, setEvents] =
+    useState([]);
+
+  const [selectedEvent, setSelectedEvent] =
+    useState(null);
+
+  const [apiConnected, setApiConnected] =
+    useState(false);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  // NEW: recovered payment state
+  const [recoveredPayments, setRecoveredPayments] =
+    useState([]);
+
+  const [recoveredLoading, setRecoveredLoading] =
+    useState(true);
 
   useEffect(() => {
     let mounted = true;
@@ -1225,49 +1480,87 @@ function Analytics({ events, summary }) {
       try {
         setLoading(true);
 
-        const [summaryResponse, eventsResponse] = await Promise.all([
+        const [
+          summaryResponse,
+          eventsResponse,
+        ] = await Promise.all([
           fetch(`${API_URL}/api/summary`),
           fetch(`${API_URL}/api/events`),
         ]);
 
-        if (!summaryResponse.ok || !eventsResponse.ok) {
-          throw new Error("Backend API request failed");
+        if (
+          !summaryResponse.ok ||
+          !eventsResponse.ok
+        ) {
+          throw new Error(
+            "Backend API request failed"
+          );
         }
 
-        const summaryData = await summaryResponse.json();
-        const eventsData = await eventsResponse.json();
+        const summaryData =
+          await summaryResponse.json();
+
+        const eventsData =
+          await eventsResponse.json();
 
         const rawEvents =
           eventsData.events ||
           eventsData.cases ||
           eventsData.data ||
-          (Array.isArray(eventsData) ? eventsData : []);
+          (Array.isArray(eventsData)
+            ? eventsData
+            : []);
 
-        const normalizedEvents = Array.isArray(rawEvents)
-          ? rawEvents.map(normalizeEvent)
-          : [];
+        const normalizedEvents =
+          Array.isArray(rawEvents)
+            ? rawEvents.map(normalizeEvent)
+            : [];
 
         if (!mounted) return;
 
         setSummary({
-          total_at_risk: Number(summaryData.total_at_risk ?? 0),
-          total_recoverable: Number(summaryData.total_recoverable ?? 0),
-          total_recovered: Number(summaryData.total_recovered ?? 0),
-          recovery_rate: Number(summaryData.recovery_rate ?? 0),
-          status_breakdown: summaryData.status_breakdown || [],
-          priority_breakdown: summaryData.priority_breakdown || [],
+          total_at_risk: Number(
+            summaryData.total_at_risk ?? 0
+          ),
+          total_recoverable: Number(
+            summaryData.total_recoverable ?? 0
+          ),
+          total_recovered: Number(
+            summaryData.total_recovered ?? 0
+          ),
+          recovery_rate: Number(
+            summaryData.recovery_rate ?? 0
+          ),
+          status_breakdown:
+            summaryData.status_breakdown || [],
+          priority_breakdown:
+            summaryData.priority_breakdown || [],
           failure_reason_breakdown:
-            summaryData.failure_reason_breakdown || [],
+            summaryData.failure_reason_breakdown ||
+            [],
         });
 
         setEvents(normalizedEvents);
         setApiConnected(true);
 
-        console.log("Revenue Recovery API connected");
-        console.log("Events loaded:", normalizedEvents.length);
-        console.log("Summary:", summaryData);
+        console.log(
+          "Revenue Recovery API connected"
+        );
+
+        console.log(
+          "Events loaded:",
+          normalizedEvents.length
+        );
+
+        console.log(
+          "Summary:",
+          summaryData
+        );
       } catch (error) {
-        console.error("Dashboard API error:", error);
+        console.error(
+          "Dashboard API error:",
+          error
+        );
 
         if (mounted) {
           setApiConnected(false);
@@ -1285,6 +1578,57 @@ function Analytics({ events, summary }) {
       mounted = false;
     };
   }, []);
+
+  // NEW: load successful recovered payments
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadRecoveredPayments() {
+      try {
+        setRecoveredLoading(true);
+
+        const response = await fetch(
+          `${API_URL}/api/recovered-payments`
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            "Failed to load recovered payments"
+          );
+        }
+
+        const data = await response.json();
+
+        if (!mounted) return;
+
+        setRecoveredPayments(
+          Array.isArray(data.payments)
+            ? data.payments
+            : []
+        );
+      } catch (error) {
+        console.error(
+          "Recovered payments API error:",
+          error
+        );
+
+        if (mounted) {
+          setRecoveredPayments([]);
+        }
+      } finally {
+        if (mounted) {
+          setRecoveredLoading(false);
+        }
+      }
+    }
+
+    loadRecoveredPayments();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   async function startRecoveryPayment(event) {
     try {
       setPaymentLoading(true);
@@ -1295,31 +1639,43 @@ function Analytics({ events, summary }) {
         {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type":
+              "application/json",
           },
           body: JSON.stringify({
-  amount: 100,
-  event_id: event.event_id,
-  customer_id: event.customer_id,
-}),
+            amount: 100,
+            event_id: event.event_id,
+            customer_id: event.customer_id,
+          }),
         }
       );
 
       if (!orderResponse.ok) {
-        throw new Error("Unable to create Razorpay order");
+        throw new Error(
+          "Unable to create Razorpay order"
+        );
       }
 
-      const order = await orderResponse.json();
+      const order =
+        await orderResponse.json();
 
       if (!window.Razorpay) {
-        const script = document.createElement("script");
-        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+        const script =
+          document.createElement("script");
 
-        await new Promise((resolve, reject) => {
-          script.onload = resolve;
-          script.onerror = reject;
-          document.body.appendChild(script);
-        });
+        script.src =
+          "https://checkout.razorpay.com/v1/checkout.js";
+
+        await new Promise(
+          (resolve, reject) => {
+            script.onload = resolve;
+            script.onerror = reject;
+
+            document.body.appendChild(
+              script
+            );
+          }
+        );
       }
 
       const options = {
@@ -1330,43 +1686,110 @@ function Analytics({ events, summary }) {
         description: "Revenue Recovery",
         order_id: order.id,
 
-        handler: async function (response) {
+        config: {
+          display: {
+            blocks: {
+              upi: {
+                name: "Pay using UPI",
+                instruments: [
+                  {
+                    method: "upi",
+                  },
+                ],
+              },
+            },
+
+            sequence: ["block.upi"],
+
+            preferences: {
+              show_default_blocks: true,
+            },
+          },
+        },
+
+        handler: async function (
+          response
+        ) {
           try {
-            const verifyResponse = await fetch(
-              `${API_URL}/api/razorpay/verify-payment`,
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  event_id: event.event_id,
-                  razorpay_payment_id:
-                    response.razorpay_payment_id,
-                  razorpay_order_id:
-                    response.razorpay_order_id,
-                  razorpay_signature:
-                    response.razorpay_signature,
-                }),
+            const verifyResponse =
+              await fetch(
+                `${API_URL}/api/razorpay/verify-payment`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type":
+                      "application/json",
+                  },
+                  body: JSON.stringify({
+                    event_id:
+                      event.event_id,
+
+                    razorpay_payment_id:
+                      response.razorpay_payment_id,
+
+                    razorpay_order_id:
+                      response.razorpay_order_id,
+
+                    razorpay_signature:
+                      response.razorpay_signature,
+                  }),
+                }
+              );
+
+            const result =
+              await verifyResponse.json();
+
+            if (verifyResponse.ok) {
+              setPaymentMessage(
+                `✓ Payment recovered successfully — ${response.razorpay_payment_id}`
+              );
+
+              setPaymentLoading(false);
+
+              // NEW:
+              // Immediately refresh recovered-payment list
+              try {
+                const recoveredResponse =
+                  await fetch(
+                    `${API_URL}/api/recovered-payments`
+                  );
+
+                if (
+                  recoveredResponse.ok
+                ) {
+                  const recoveredData =
+                    await recoveredResponse.json();
+
+                  setRecoveredPayments(
+                    Array.isArray(
+                      recoveredData.payments
+                    )
+                      ? recoveredData.payments
+                      : []
+                  );
+                }
+              } catch (error) {
+                console.error(
+                  "Failed to refresh recovered payments:",
+                  error
+                );
               }
-            );
+            } else {
+              setPaymentMessage(
+                result.detail ||
+                  "Payment verification failed"
+              );
 
-            const result = await verifyResponse.json();
-
-           if (verifyResponse.ok) {
-  setPaymentMessage(
-    `✓ Payment recovered successfully — ${response.razorpay_payment_id}`
-  );
-
-  setPaymentLoading(false);
-} else {
-  setPaymentMessage(
-    result.detail || "Payment verification failed"
-  );
-}
+              setPaymentLoading(false);
+            }
           } catch (error) {
             console.error(error);
-            setPaymentMessage("Payment completed, but verification failed.");
+
+            setPaymentMessage(
+              "Payment completed, but verification failed."
+            );
+
+            setPaymentLoading(false);
           }
         },
 
@@ -1381,62 +1804,114 @@ function Analytics({ events, summary }) {
         },
       };
 
-      const razorpay = new window.Razorpay(options);
+      const razorpay =
+        new window.Razorpay(options);
 
-      razorpay.on("payment.failed", function (response) {
-        console.error("Razorpay payment failed:", response.error);
+      razorpay.on(
+        "payment.failed",
+        function (response) {
+          console.error(
+            "Razorpay payment failed:",
+            response.error
+          );
 
-        setPaymentMessage(
-          `Payment failed: ${response.error.description || "Transaction failed"}`
-        );
+          setPaymentMessage(
+            `Payment failed: ${
+              response.error.description ||
+              "Transaction failed"
+            }`
+          );
 
-        setPaymentLoading(false);
-      });
+          setPaymentLoading(false);
+        }
+      );
 
       razorpay.open();
     } catch (error) {
-      console.error("Razorpay error:", error);
-      setPaymentMessage(error.message || "Unable to start payment");
+      console.error(
+        "Razorpay error:",
+        error
+      );
+
+      setPaymentMessage(
+        error.message ||
+          "Unable to start payment"
+      );
+
       setPaymentLoading(false);
     }
   }
+
   function renderPage() {
-    if (loading && events.length === 0) {
+    if (
+      loading &&
+      events.length === 0
+    ) {
       return (
         <div className="loading-screen">
           <div className="loading-orb" />
-          <h2>Loading Revenue Recovery Intelligence</h2>
-          <p>Connecting to the recovery engine...</p>
+
+          <h2>
+            Loading Revenue Recovery Intelligence
+          </h2>
+
+          <p>
+            Connecting to the recovery engine...
+          </p>
         </div>
       );
     }
 
     switch (activePage) {
+      // NEW: recovered payments page
+      case "recovered":
+        return (
+          <RecoveredPayments
+            payments={recoveredPayments}
+            loading={recoveredLoading}
+          />
+        );
+
       case "queue":
         return (
           <Queue
             events={events}
-            onSelectEvent={setSelectedEvent}
+            onSelectEvent={
+              setSelectedEvent
+            }
           />
         );
 
       case "strategy":
-        return <Strategy events={events} />;
+        return (
+          <Strategy events={events} />
+        );
 
       case "audit":
-        return <Audit events={events} />;
+        return (
+          <Audit events={events} />
+        );
 
       case "analytics":
-        return <Analytics events={events} summary={summary} />;
+        return (
+          <Analytics
+            events={events}
+            summary={summary}
+          />
+        );
 
       default:
         return (
           <Overview
             summary={summary}
             events={events}
-            onSelectEvent={setSelectedEvent}
+            onSelectEvent={
+              setSelectedEvent
+            }
             onNavigate={setActivePage}
-            apiConnected={apiConnected}
+            apiConnected={
+              apiConnected
+            }
           />
         );
     }
@@ -2753,31 +3228,58 @@ function Analytics({ events, summary }) {
       <div className="app">
         <aside className="sidebar">
           <div className="brand">
-            <div className="brand-logo">RR</div>
+            <div className="brand-logo">
+              RR
+            </div>
 
             <div>
-              <div className="brand-name">Revenue Recovery</div>
-              <div className="brand-sub">AI Agent</div>
+              <div className="brand-name">
+                Revenue Recovery
+              </div>
+
+              <div className="brand-sub">
+                AI Agent
+              </div>
             </div>
           </div>
 
-          <div className="nav-title">AI OPERATIONS</div>
+          <div className="nav-title">
+            AI OPERATIONS
+          </div>
 
           <nav className="nav">
             {NAV_ITEMS.map((item) => (
               <button
                 key={item.id}
                 className={`nav-button ${
-                  activePage === item.id ? "active" : ""
+                  activePage === item.id
+                    ? "active"
+                    : ""
                 }`}
-                onClick={() => setActivePage(item.id)}
+                onClick={() =>
+                  setActivePage(item.id)
+                }
               >
-                <Icon>{item.icon}</Icon>
-                <span>{item.label}</span>
+                <Icon>
+                  {item.icon}
+                </Icon>
+
+                <span>
+                  {item.label}
+                </span>
 
                 {item.id === "queue" && (
-                  <span className="nav-count">{events.length}</span>
+                  <span className="nav-count">
+                    {events.length}
+                  </span>
                 )}
+
+                {item.id === "recovered" &&
+                  recoveredPayments.length > 0 && (
+                    <span className="nav-count">
+                      {recoveredPayments.length}
+                    </span>
+                  )}
               </button>
             ))}
           </nav>
@@ -2786,30 +3288,46 @@ function Analytics({ events, summary }) {
             <div className="system-card">
               <div className="system-row">
                 <span className="green-dot" />
-                <strong>System operational</strong>
+
+                <strong>
+                  System operational
+                </strong>
               </div>
 
               <div className="system-sub">
-                AI agent {apiConnected ? "online" : "standby"}
+                AI agent{" "}
+                {apiConnected
+                  ? "online"
+                  : "standby"}
               </div>
             </div>
 
-            <div className="version">Revenue Recovery v1.0</div>
+            <div className="version">
+              Revenue Recovery v1.0
+            </div>
           </div>
         </aside>
 
-        <main className="main">{renderPage()}</main>
-<Modal
-  event={selectedEvent}
-  onClose={() => {
-    setSelectedEvent(null);
-    setPaymentMessage("");
-  }}
-  onPay={startRecoveryPayment}
-  paymentLoading={paymentLoading}
-  paymentMessage={paymentMessage}
-/>
+        <main className="main">
+          {renderPage()}
+        </main>
+
+        <Modal
+          event={selectedEvent}
+          onClose={() => {
+            setSelectedEvent(null);
+            setPaymentMessage("");
+          }}
+          onPay={startRecoveryPayment}
+          paymentLoading={
+            paymentLoading
+          }
+          paymentMessage={
+            paymentMessage
+          }
+        />
       </div>
     </>
   );
 }
+``
