@@ -2,52 +2,87 @@ import os
 import hmac
 import hashlib
 import time
+
 import razorpay
 from dotenv import load_dotenv
-from fastapi import Body, HTTPException
-from fastapi import FastAPI, HTTPException
+from fastapi import Body, HTTPException, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from database import get_connection
 from strategy_simulator import compare_strategies
 
+
 app = FastAPI(title="AI Revenue Recovery API")
 
-# Allow the React frontend (running on a different port) to call this API
+
+# ============================================================
+# CORS
+# ============================================================
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # fine for a hackathon demo; would be locked down in production
+    allow_origins=["*"],  # fine for a hackathon demo
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
+# ============================================================
+# SUMMARY
+# ============================================================
+
 @app.get("/api/summary")
 def get_summary():
     conn = get_connection()
 
-    total_at_risk = conn.execute("SELECT SUM(amount) as total FROM events").fetchone()["total"] or 0
-    total_recoverable = conn.execute(
-        "SELECT SUM(amount) as total FROM events WHERE action_status = 'executed'"
-    ).fetchone()["total"] or 0
-    total_recovered = conn.execute(
-        "SELECT SUM(recovered_amount) as total FROM events"
-    ).fetchone()["total"] or 0
+    total_at_risk = (
+        conn.execute(
+            "SELECT SUM(amount) as total FROM events"
+        ).fetchone()["total"]
+        or 0
+    )
+
+    total_recoverable = (
+        conn.execute(
+            "SELECT SUM(amount) as total FROM events "
+            "WHERE action_status = 'executed'"
+        ).fetchone()["total"]
+        or 0
+    )
+
+    total_recovered = (
+        conn.execute(
+            "SELECT SUM(recovered_amount) as total FROM events"
+        ).fetchone()["total"]
+        or 0
+    )
 
     status_counts = conn.execute(
-        "SELECT action_status, COUNT(*) as count FROM events GROUP BY action_status"
+        "SELECT action_status, COUNT(*) as count "
+        "FROM events GROUP BY action_status"
     ).fetchall()
 
     priority_counts = conn.execute(
-        "SELECT priority, COUNT(*) as count FROM events GROUP BY priority"
+        "SELECT priority, COUNT(*) as count "
+        "FROM events GROUP BY priority"
     ).fetchall()
 
     reason_breakdown = conn.execute(
-        "SELECT failure_reason, SUM(amount) as total_amount, COUNT(*) as count FROM events GROUP BY failure_reason ORDER BY total_amount DESC"
+        "SELECT failure_reason, "
+        "SUM(amount) as total_amount, "
+        "COUNT(*) as count "
+        "FROM events "
+        "GROUP BY failure_reason "
+        "ORDER BY total_amount DESC"
     ).fetchall()
 
     conn.close()
 
-    recovery_rate = (total_recovered / total_recoverable * 100) if total_recoverable > 0 else 0
+    recovery_rate = (
+        total_recovered / total_recoverable * 100
+        if total_recoverable > 0
+        else 0
+    )
 
     return {
         "total_at_risk": round(total_at_risk, 2),
@@ -60,6 +95,10 @@ def get_summary():
     }
 
 
+# ============================================================
+# EVENTS
+# ============================================================
+
 @app.get("/api/events")
 def get_events(status: str = None, priority: str = None):
     conn = get_connection()
@@ -71,31 +110,48 @@ def get_events(status: str = None, priority: str = None):
     if status:
         conditions.append("action_status = ?")
         params.append(status)
+
     if priority:
         conditions.append("priority = ?")
         params.append(priority)
 
     if conditions:
         query += " WHERE " + " AND ".join(conditions)
+
     query += " ORDER BY risk_score DESC"
 
     rows = conn.execute(query, params).fetchall()
+
     conn.close()
 
     return [dict(r) for r in rows]
 
 
+# ============================================================
+# EVENT DETAIL + AUDIT TRAIL
+# ============================================================
+
 @app.get("/api/events/{event_id}")
 def get_event_detail(event_id: str):
     conn = get_connection()
 
-    event = conn.execute("SELECT * FROM events WHERE event_id = ?", (event_id,)).fetchone()
+    event = conn.execute(
+        "SELECT * FROM events WHERE event_id = ?",
+        (event_id,)
+    ).fetchone()
+
     if not event:
         conn.close()
-        raise HTTPException(status_code=404, detail="Event not found")
+        raise HTTPException(
+            status_code=404,
+            detail="Event not found"
+        )
 
     audit_trail = conn.execute(
-        "SELECT * FROM audit_log WHERE event_id = ? ORDER BY timestamp", (event_id,)
+        "SELECT * FROM audit_log "
+        "WHERE event_id = ? "
+        "ORDER BY timestamp",
+        (event_id,)
     ).fetchall()
 
     conn.close()
@@ -106,12 +162,26 @@ def get_event_detail(event_id: str):
     }
 
 
+# ============================================================
+# ROOT
+# ============================================================
+
 @app.get("/")
 def root():
-    return {"message": "AI Revenue Recovery API is running"}
+    return {
+        "message": "AI Revenue Recovery API is running"
+    }
+
+
+# ============================================================
+# STRATEGY COMPARISON
+# ============================================================
+
 @app.get("/api/strategy-comparison")
 def get_strategy_comparison():
     return compare_strategies()
+
+
 # ============================================================
 # RAZORPAY TEST MODE INTEGRATION
 # ============================================================
@@ -135,8 +205,14 @@ def get_razorpay_client():
             detail="Safety check failed: Test Mode key required"
         )
 
-    return razorpay.Client(auth=(key_id, key_secret))
+    return razorpay.Client(
+        auth=(key_id, key_secret)
+    )
 
+
+# ============================================================
+# CREATE RAZORPAY ORDER
+# ============================================================
 
 @app.post("/api/razorpay/create-order")
 def create_razorpay_order(payload: dict = Body(...)):
@@ -156,16 +232,20 @@ def create_razorpay_order(payload: dict = Body(...)):
         # The browser cannot choose the payment amount.
         amount_paise = 10000
 
-        order = client.order.create({
-            "amount": amount_paise,
-            "currency": "INR",
-            "receipt": f"reviveai_{event_id}_{int(time.time())}"[:40],
-            "notes": {
-                "project": "ReviveAI",
-                "event_id": event_id,
-                "customer_id": customer_id or ""
+        order = client.order.create(
+            {
+                "amount": amount_paise,
+                "currency": "INR",
+                "receipt": (
+                    f"reviveai_{event_id}_{int(time.time())}"
+                )[:40],
+                "notes": {
+                    "project": "ReviveAI",
+                    "event_id": event_id,
+                    "customer_id": customer_id or ""
+                }
             }
-        })
+        )
 
         return {
             "id": order["id"],
@@ -183,6 +263,10 @@ def create_razorpay_order(payload: dict = Body(...)):
             detail=f"Razorpay order creation failed: {str(error)}"
         )
 
+
+# ============================================================
+# VERIFY RAZORPAY PAYMENT
+# ============================================================
 
 @app.post("/api/razorpay/verify-payment")
 def verify_razorpay_payment(payload: dict = Body(...)):
@@ -204,7 +288,10 @@ def verify_razorpay_payment(payload: dict = Body(...)):
             detail="Razorpay secret is missing"
         )
 
+    # --------------------------------------------------------
     # Verify Razorpay signature
+    # --------------------------------------------------------
+
     message = f"{order_id}|{payment_id}"
 
     expected_signature = hmac.new(
@@ -227,6 +314,10 @@ def verify_razorpay_payment(payload: dict = Body(...)):
 
         payment = client.payment.fetch(payment_id)
 
+        # ----------------------------------------------------
+        # Payment validation
+        # ----------------------------------------------------
+
         if payment.get("order_id") != order_id:
             raise HTTPException(
                 status_code=400,
@@ -248,12 +339,55 @@ def verify_razorpay_payment(payload: dict = Body(...)):
         if payment.get("status") != "captured":
             raise HTTPException(
                 status_code=400,
-                detail=f"Payment status is {payment.get('status')}"
+                detail=(
+                    f"Payment status is "
+                    f"{payment.get('status')}"
+                )
             )
+
+        # ----------------------------------------------------
+        # Record successful payment in existing audit_log
+        # ----------------------------------------------------
+
+        event_id = payload.get("event_id")
+
+        if event_id:
+            conn = get_connection()
+
+            conn.execute(
+                """
+                INSERT INTO audit_log
+                (event_id, timestamp, step, detail)
+                VALUES (?, ?, ?, ?)
+                """,
+                (
+                    event_id,
+                    time.strftime(
+                        "%Y-%m-%dT%H:%M:%S"
+                    ),
+                    "razorpay_payment_recovered",
+                    (
+                        f"Payment ID: {payment_id} | "
+                        f"Order ID: {order_id} | "
+                        f"Amount: ₹"
+                        f"{payment.get('amount', 0) / 100:.2f} | "
+                        f"Status: captured"
+                    )
+                )
+            )
+
+            conn.commit()
+            conn.close()
+
+        # ----------------------------------------------------
+        # Successful response
+        # ----------------------------------------------------
 
         return {
             "success": True,
-            "message": "Razorpay payment verified successfully",
+            "message": (
+                "Razorpay payment verified successfully"
+            ),
             "payment_id": payment_id,
             "order_id": order_id,
             "status": payment.get("status")
@@ -265,5 +399,93 @@ def verify_razorpay_payment(payload: dict = Body(...)):
     except Exception as error:
         raise HTTPException(
             status_code=500,
-            detail=f"Payment verification failed: {str(error)}"
+            detail=(
+                f"Payment verification failed: "
+                f"{str(error)}"
+            )
         )
+
+
+# ============================================================
+# RECOVERED RAZORPAY PAYMENTS
+# ============================================================
+
+@app.get("/api/recovered-payments")
+def get_recovered_payments():
+    conn = get_connection()
+
+    rows = conn.execute(
+        """
+        SELECT
+            a.event_id,
+            e.customer_id,
+            e.amount,
+            e.timestamp AS recovery_case_date,
+            a.timestamp AS payment_date,
+            a.detail
+        FROM audit_log a
+        LEFT JOIN events e
+            ON e.event_id = a.event_id
+        WHERE a.step = 'razorpay_payment_recovered'
+        ORDER BY a.timestamp DESC
+        """
+    ).fetchall()
+
+    conn.close()
+
+    payments = []
+
+    for row in rows:
+        detail = row["detail"] or ""
+
+        payment_id = ""
+        order_id = ""
+
+        # Default to the original event amount.
+        amount = row["amount"] or 0
+
+        for part in detail.split(" | "):
+
+            if part.startswith("Payment ID:"):
+                payment_id = (
+                    part
+                    .replace("Payment ID:", "")
+                    .strip()
+                )
+
+            elif part.startswith("Order ID:"):
+                order_id = (
+                    part
+                    .replace("Order ID:", "")
+                    .strip()
+                )
+
+            elif part.startswith("Amount:"):
+                amount_text = (
+                    part
+                    .replace("Amount:", "")
+                    .replace("₹", "")
+                    .strip()
+                )
+
+                try:
+                    amount = float(amount_text)
+                except ValueError:
+                    pass
+
+        payments.append(
+            {
+                "event_id": row["event_id"],
+                "customer_id": row["customer_id"],
+                "amount": amount,
+                "payment_id": payment_id,
+                "order_id": order_id,
+                "payment_date": row["payment_date"],
+                "status": "recovered"
+            }
+        )
+
+    return {
+        "count": len(payments),
+        "payments": payments
+    }
