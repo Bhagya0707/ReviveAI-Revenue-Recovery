@@ -2,6 +2,7 @@ import os
 import hmac
 import hashlib
 import time
+import requests
 
 import razorpay
 from dotenv import load_dotenv
@@ -13,6 +14,65 @@ from strategy_simulator import compare_strategies
 
 
 app = FastAPI(title="AI Revenue Recovery API")
+def supabase_headers():
+    url = os.getenv("SUPABASE_URL")
+    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+
+    if not url or not key:
+        raise RuntimeError("Supabase credentials are missing")
+
+    return {
+        "apikey": key,
+        "Authorization": f"Bearer {key}",
+        "Content-Type": "application/json",
+    }
+
+
+def save_recovered_payment(event_id, customer_id, payment_id, order_id, amount):
+    url = os.getenv("SUPABASE_URL")
+
+    response = requests.post(
+        f"{url}/rest/v1/recovered_payments",
+        headers=supabase_headers(),
+        json={
+            "event_id": event_id,
+            "customer_id": customer_id,
+            "payment_id": payment_id,
+            "order_id": order_id,
+            "amount": amount,
+            "status": "Recovered",
+        },
+        timeout=10,
+    )
+
+    if not response.ok:
+        raise RuntimeError(
+            f"Supabase save failed: {response.status_code} {response.text}"
+        )
+
+
+def get_recovered_payments_from_supabase():
+    url = os.getenv("SUPABASE_URL")
+
+    response = requests.get(
+        f"{url}/rest/v1/recovered_payments",
+        headers={
+            **supabase_headers(),
+            "Prefer": "return=representation",
+        },
+        params={
+            "select": "event_id,customer_id,amount,payment_id,order_id,payment_date,status",
+            "order": "payment_date.desc",
+        },
+        timeout=10,
+    )
+
+    if not response.ok:
+        raise RuntimeError(
+            f"Supabase fetch failed: {response.status_code} {response.text}"
+        )
+
+    return response.json()
 
 
 # ============================================================
@@ -350,7 +410,15 @@ def verify_razorpay_payment(payload: dict = Body(...)):
         # ----------------------------------------------------
 
         event_id = payload.get("event_id")
+        customer_id = payload.get("customer_id")
 
+        save_recovered_payment(
+            event_id=event_id,
+            customer_id=customer_id,
+            payment_id=payment_id,
+            order_id=order_id,
+            amount=payment.get("amount", 0) / 100,
+        )
         if event_id:
             conn = get_connection()
 
