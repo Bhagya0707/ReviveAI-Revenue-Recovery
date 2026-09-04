@@ -20,12 +20,12 @@ const API_URL = "https://reviveai-revenue-recovery.onrender.com";
 const RAZORPAY_KEY_ID = "rzp_test_TXAlnoCwvrNzp6";
 
 const NAV_ITEMS = [
-  { id: "overview", icon: "âŒ‚", label: "Overview" },
-  { id: "queue", icon: "â˜·", label: "Recovery Queue" },
-  { id: "recovered", icon: "âœ“", label: "Recovered Payments" },
-  { id: "strategy", icon: "â†—", label: "Strategy Simulator" },
-  { id: "audit", icon: "â—‡", label: "Audit & Guardrails" },
-  { id: "analytics", icon: "â–¥", label: "Analytics" },
+  { id: "overview", icon: "⌂", label: "Overview" },
+  { id: "queue", icon: "☷", label: "Recovery Queue" },
+  { id: "recovered", icon: "✓", label: "Recovered Payments" },
+  { id: "strategy", icon: "↗", label: "Strategy Simulator" },
+  { id: "audit", icon: "◇", label: "Audit & Guardrails" },
+  { id: "analytics", icon: "▥", label: "Analytics" },
 ];
 
 const FALLBACK_SUMMARY = {
@@ -126,7 +126,7 @@ function priorityClass(priority) {
 }
 
 function formatDate(value) {
-  if (!value) return "â€”";
+  if (!value) return "—";
 
   const d = new Date(value);
 
@@ -178,71 +178,24 @@ function Modal({
             <div className="muted">{event.event_id}</div>
           </div>
 
-          <button className="close-btn" onClick={onClose}>
-            Ã—
+          <button className="close-btn" onClick={onClose}>X
+            
           </button>
         </div>
 
         <div className="modal-grid">
-          <div className="why-action-card">
-  <div className="eyebrow">DECISION EXPLANATION</div>
-  <h3>Why This Action?</h3>
-  <div className="why-action-grid">
-    <div><span>Failure cause</span><strong>{prettyReason(event.failure_reason)}</strong></div>
-    <div><span>Recovery probability</span><strong>{percent(event.recovery_probability * 100)}</strong></div>
-    <div><span>Recommended intervention</span><strong>{actionLabel(event.recommended_action)}</strong></div>
-    <div><span>Decision status</span><strong>{statusLabel(event.action_status)}</strong></div>
-  </div>
-  <p>The agent combines failure cause, recovery probability, customer history and guardrail conditions before selecting this bounded recovery action.</p>
-</div>
 <div className="detail-card">
             <span>Revenue at risk</span>
             <strong>{moneyFull(event.amount)}</strong>
           </div>
-
-          <div className="why-action-card">
-  <div className="eyebrow">DECISION EXPLANATION</div>
-  <h3>Why This Action?</h3>
-  <div className="why-action-grid">
-    <div><span>Failure cause</span><strong>{prettyReason(event.failure_reason)}</strong></div>
-    <div><span>Recovery probability</span><strong>{percent(event.recovery_probability * 100)}</strong></div>
-    <div><span>Recommended intervention</span><strong>{actionLabel(event.recommended_action)}</strong></div>
-    <div><span>Decision status</span><strong>{statusLabel(event.action_status)}</strong></div>
-  </div>
-  <p>The agent combines failure cause, recovery probability, customer history and guardrail conditions before selecting this bounded recovery action.</p>
-</div>
 <div className="detail-card">
             <span>Risk score</span>
             <strong>{event.risk_score.toFixed(1)}</strong>
           </div>
-
-          <div className="why-action-card">
-  <div className="eyebrow">DECISION EXPLANATION</div>
-  <h3>Why This Action?</h3>
-  <div className="why-action-grid">
-    <div><span>Failure cause</span><strong>{prettyReason(event.failure_reason)}</strong></div>
-    <div><span>Recovery probability</span><strong>{percent(event.recovery_probability * 100)}</strong></div>
-    <div><span>Recommended intervention</span><strong>{actionLabel(event.recommended_action)}</strong></div>
-    <div><span>Decision status</span><strong>{statusLabel(event.action_status)}</strong></div>
-  </div>
-  <p>The agent combines failure cause, recovery probability, customer history and guardrail conditions before selecting this bounded recovery action.</p>
-</div>
 <div className="detail-card">
             <span>Recovery probability</span>
             <strong>{percent(event.recovery_probability * 100)}</strong>
           </div>
-
-          <div className="why-action-card">
-  <div className="eyebrow">DECISION EXPLANATION</div>
-  <h3>Why This Action?</h3>
-  <div className="why-action-grid">
-    <div><span>Failure cause</span><strong>{prettyReason(event.failure_reason)}</strong></div>
-    <div><span>Recovery probability</span><strong>{percent(event.recovery_probability * 100)}</strong></div>
-    <div><span>Recommended intervention</span><strong>{actionLabel(event.recommended_action)}</strong></div>
-    <div><span>Decision status</span><strong>{statusLabel(event.action_status)}</strong></div>
-  </div>
-  <p>The agent combines failure cause, recovery probability, customer history and guardrail conditions before selecting this bounded recovery action.</p>
-</div>
 <div className="detail-card">
             <span>Recovered amount</span>
             <strong>{moneyFull(event.recovered_amount)}</strong>
@@ -434,7 +387,7 @@ function Overview({
 
       {!apiConnected && (
         <div className="warning-banner">
-          <span>âš </span>
+        <span>•</span>
           Backend connection unavailable. Showing the last known dashboard
           values instead of inventing new data.
         </div>
@@ -442,8 +395,8 @@ function Overview({
 
       <div className="live-data-strip">
         <span className="green-dot" />
-        Live Â· Demo data active
-        <span className="separator">â€¢</span>
+        Live · Demo data active
+        <span className="separator">•</span>
         {events.length} recovery events loaded
       </div>
 
@@ -491,7 +444,7 @@ function Overview({
             className="text-btn"
             onClick={() => onNavigate("strategy")}
           >
-            View simulator â†’
+            View simulator →
           </button>
         </div>
 
@@ -516,7 +469,7 @@ function Overview({
             </div>
           </div>
 
-          <div className="policy-arrow">â†’</div>
+          <div className="policy-arrow">→</div>
 
           <div className="policy-panel optimized">
             <div className="policy-label">AI-OPTIMIZED POLICY</div>
@@ -526,7 +479,7 @@ function Overview({
             </div>
 
             <div className="optimization-note">
-              <span>âœ¦</span>
+              <span>✦</span>
               Uses actual recovery outcomes
             </div>
           </div>
@@ -559,7 +512,7 @@ function Overview({
           </div>
 
           <button className="text-btn" onClick={() => onNavigate("queue")}>
-            View all â†’
+            View all →
           </button>
         </div>
 
@@ -938,7 +891,7 @@ function RecoveredPayments({ payments, loading }) {
                     </td>
 
                     <td>
-                      {payment.event_id || "â€”"}
+                      {payment.event_id || "—"}
                     </td>
 
                     <td>
@@ -950,7 +903,7 @@ function RecoveredPayments({ payments, loading }) {
                       >
                         {payment.payment_id ||
                           payment.razorpay_payment_id ||
-                          "â€”"}
+                          "—"}
                       </small>
                     </td>
 
@@ -1198,7 +1151,7 @@ function Audit({ events }) {
 
         <div className="guardrail-grid">
           <div>
-            <span className="guardrail-icon green-bg">âœ“</span>
+            <span className="guardrail-icon green-bg">✓</span>
 
             <strong>Bounded actions</strong>
 
@@ -1209,7 +1162,7 @@ function Audit({ events }) {
           </div>
 
           <div>
-            <span className="guardrail-icon amber-bg">!</span>
+            <span className="guardrail-icon amber-bg">✦</span>
 
             <strong>Human escalation</strong>
 
@@ -1219,7 +1172,7 @@ function Audit({ events }) {
           </div>
 
           <div>
-            <span className="guardrail-icon red-bg">Ã—</span>
+            <span className="guardrail-icon red-bg"></span>
 
             <strong>Stop conditions</strong>
 
@@ -1822,7 +1775,7 @@ export default function App() {
 
             if (verifyResponse.ok) {
               setPaymentMessage(
-                `âœ“ Payment recovered successfully â€” ${response.razorpay_payment_id}`
+                `✓ Payment recovered successfully — ${response.razorpay_payment_id}`
               );
 
               setPaymentLoading(false);
@@ -3074,6 +3027,56 @@ export default function App() {
           font-size: 19px;
         }
 
+        .why-action-card {
+          grid-column: 1 / -1;
+          padding: 18px;
+          background: #0a0e13;
+          border: 1px solid #1b222d;
+          border-radius: 10px;
+        }
+
+        .why-action-card h3 {
+          color: #e9edf4;
+          font-size: 18px;
+          margin: 7px 0 0;
+        }
+
+        .why-action-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 10px;
+          margin-top: 15px;
+        }
+
+        .why-action-grid > div {
+          padding: 12px;
+          background: #0c1016;
+          border: 1px solid #1a212a;
+          border-radius: 8px;
+        }
+
+        .why-action-grid span {
+          display: block;
+          color: #566173;
+          font-size: 8px;
+          text-transform: uppercase;
+          letter-spacing: 0.7px;
+        }
+
+        .why-action-grid strong {
+          display: block;
+          color: #dfe4ec;
+          font-size: 11px;
+          margin-top: 7px;
+          line-height: 1.4;
+        }
+
+        .why-action-card p {
+          color: #687385;
+          font-size: 9px;
+          line-height: 1.6;
+          margin: 13px 0 0;
+        }
         .modal-grid {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
@@ -3412,6 +3415,20 @@ export default function App() {
   );
 }
 ``
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
