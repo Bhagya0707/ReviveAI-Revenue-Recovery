@@ -14,6 +14,12 @@ from strategy_simulator import compare_strategies
 
 
 app = FastAPI(title="AI Revenue Recovery API")
+
+
+# ============================================================
+# SUPABASE
+# ============================================================
+
 def supabase_headers():
     url = os.getenv("SUPABASE_URL")
     key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
@@ -28,7 +34,13 @@ def supabase_headers():
     }
 
 
-def save_recovered_payment(event_id, customer_id, payment_id, order_id, amount):
+def save_recovered_payment(
+    event_id,
+    customer_id,
+    payment_id,
+    order_id,
+    amount
+):
     url = os.getenv("SUPABASE_URL")
 
     response = requests.post(
@@ -47,7 +59,8 @@ def save_recovered_payment(event_id, customer_id, payment_id, order_id, amount):
 
     if not response.ok:
         raise RuntimeError(
-            f"Supabase save failed: {response.status_code} {response.text}"
+            f"Supabase save failed: "
+            f"{response.status_code} {response.text}"
         )
 
 
@@ -61,7 +74,15 @@ def get_recovered_payments_from_supabase():
             "Prefer": "return=representation",
         },
         params={
-            "select": "event_id,customer_id,amount,payment_id,order_id,payment_date,status",
+            "select": (
+                "event_id,"
+                "customer_id,"
+                "amount,"
+                "payment_id,"
+                "order_id,"
+                "payment_date,"
+                "status"
+            ),
             "order": "payment_date.desc",
         },
         timeout=10,
@@ -69,7 +90,8 @@ def get_recovered_payments_from_supabase():
 
     if not response.ok:
         raise RuntimeError(
-            f"Supabase fetch failed: {response.status_code} {response.text}"
+            f"Supabase fetch failed: "
+            f"{response.status_code} {response.text}"
         )
 
     return response.json()
@@ -81,7 +103,7 @@ def get_recovered_payments_from_supabase():
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # fine for a hackathon demo
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -151,7 +173,9 @@ def get_summary():
         "recovery_rate": round(recovery_rate, 1),
         "status_breakdown": [dict(r) for r in status_counts],
         "priority_breakdown": [dict(r) for r in priority_counts],
-        "failure_reason_breakdown": [dict(r) for r in reason_breakdown],
+        "failure_reason_breakdown": [
+            dict(r) for r in reason_breakdown
+        ],
     }
 
 
@@ -180,7 +204,10 @@ def get_events(status: str = None, priority: str = None):
 
     query += " ORDER BY risk_score DESC"
 
-    rows = conn.execute(query, params).fetchall()
+    rows = conn.execute(
+        query,
+        params
+    ).fetchall()
 
     conn.close()
 
@@ -202,6 +229,7 @@ def get_event_detail(event_id: str):
 
     if not event:
         conn.close()
+
         raise HTTPException(
             status_code=404,
             detail="Event not found"
@@ -218,7 +246,9 @@ def get_event_detail(event_id: str):
 
     return {
         "event": dict(event),
-        "audit_trail": [dict(a) for a in audit_trail],
+        "audit_trail": [
+            dict(a) for a in audit_trail
+        ],
     }
 
 
@@ -288,8 +318,7 @@ def create_razorpay_order(payload: dict = Body(...)):
     try:
         client = get_razorpay_client()
 
-        # Fixed ₹100 amount for safe Razorpay TEST MODE integration.
-        # The browser cannot choose the payment amount.
+        # Fixed ₹100 amount for safe Razorpay TEST MODE.
         amount_paise = 10000
 
         order = client.order.create(
@@ -320,7 +349,10 @@ def create_razorpay_order(payload: dict = Body(...)):
     except Exception as error:
         raise HTTPException(
             status_code=500,
-            detail=f"Razorpay order creation failed: {str(error)}"
+            detail=(
+                f"Razorpay order creation failed: "
+                f"{str(error)}"
+            )
         )
 
 
@@ -372,7 +404,9 @@ def verify_razorpay_payment(payload: dict = Body(...)):
     try:
         client = get_razorpay_client()
 
-        payment = client.payment.fetch(payment_id)
+        payment = client.payment.fetch(
+            payment_id
+        )
 
         # ----------------------------------------------------
         # Payment validation
@@ -406,11 +440,15 @@ def verify_razorpay_payment(payload: dict = Body(...)):
             )
 
         # ----------------------------------------------------
-        # Record successful payment in existing audit_log
+        # Payment information
         # ----------------------------------------------------
 
         event_id = payload.get("event_id")
         customer_id = payload.get("customer_id")
+
+        # ----------------------------------------------------
+        # Save successful payment permanently in Supabase
+        # ----------------------------------------------------
 
         save_recovered_payment(
             event_id=event_id,
@@ -419,6 +457,11 @@ def verify_razorpay_payment(payload: dict = Body(...)):
             order_id=order_id,
             amount=payment.get("amount", 0) / 100,
         )
+
+        # ----------------------------------------------------
+        # Record successful payment in existing audit_log
+        # ----------------------------------------------------
+
         if event_id:
             conn = get_connection()
 
@@ -444,25 +487,27 @@ def verify_razorpay_payment(payload: dict = Body(...)):
                 )
             )
 
-            conn.commit()
-                    # Update the recovery outcome for adaptive learning
-        conn.execute(
-            """
-            UPDATE events
-            SET
-                recovery_result = 'recovered',
-                recovered_amount = ?,
-                action_status = 'executed'
-            WHERE event_id = ?
-            """,
-            (
-                payment.get("amount", 0) / 100,
-                event_id
-            )
-        )
+            # ------------------------------------------------
+            # Update recovery outcome
+            # ------------------------------------------------
 
-        conn.commit()
-        conn.close()
+            conn.execute(
+                """
+                UPDATE events
+                SET
+                    recovery_result = 'recovered',
+                    recovered_amount = ?,
+                    action_status = 'executed'
+                WHERE event_id = ?
+                """,
+                (
+                    payment.get("amount", 0) / 100,
+                    event_id
+                )
+            )
+
+            conn.commit()
+            conn.close()
 
         # ----------------------------------------------------
         # Successful response
@@ -497,80 +542,32 @@ def verify_razorpay_payment(payload: dict = Body(...)):
 
 @app.get("/api/recovered-payments")
 def get_recovered_payments():
-    conn = get_connection()
+    try:
+        payments = get_recovered_payments_from_supabase()
 
-    rows = conn.execute(
-        """
-        SELECT
-            a.event_id,
-            e.customer_id,
-            e.amount,
-            e.timestamp AS recovery_case_date,
-            a.timestamp AS payment_date,
-            a.detail
-        FROM audit_log a
-        LEFT JOIN events e
-            ON e.event_id = a.event_id
-        WHERE a.step = 'razorpay_payment_recovered'
-        ORDER BY a.timestamp DESC
-        """
-    ).fetchall()
+        return {
+            "count": len(payments),
+            "payments": [
+                {
+                    "event_id": row.get("event_id"),
+                    "customer_id": row.get("customer_id"),
+                    "amount": float(
+                        row.get("amount") or 0
+                    ),
+                    "payment_id": row.get("payment_id"),
+                    "order_id": row.get("order_id"),
+                    "payment_date": row.get("payment_date"),
+                    "status": "recovered"
+                }
+                for row in payments
+            ]
+        }
 
-    conn.close()
-
-    payments = []
-
-    for row in rows:
-        detail = row["detail"] or ""
-
-        payment_id = ""
-        order_id = ""
-
-        # Default to the original event amount.
-        amount = row["amount"] or 0
-
-        for part in detail.split(" | "):
-
-            if part.startswith("Payment ID:"):
-                payment_id = (
-                    part
-                    .replace("Payment ID:", "")
-                    .strip()
-                )
-
-            elif part.startswith("Order ID:"):
-                order_id = (
-                    part
-                    .replace("Order ID:", "")
-                    .strip()
-                )
-
-            elif part.startswith("Amount:"):
-                amount_text = (
-                    part
-                    .replace("Amount:", "")
-                    .replace("₹", "")
-                    .strip()
-                )
-
-                try:
-                    amount = float(amount_text)
-                except ValueError:
-                    pass
-
-        payments.append(
-            {
-                "event_id": row["event_id"],
-                "customer_id": row["customer_id"],
-                "amount": amount,
-                "payment_id": payment_id,
-                "order_id": order_id,
-                "payment_date": row["payment_date"],
-                "status": "recovered"
-            }
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                f"Failed to fetch recovered payments: "
+                f"{str(error)}"
+            )
         )
-
-    return {
-        "count": len(payments),
-        "payments": payments
-    }
