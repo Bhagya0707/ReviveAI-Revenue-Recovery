@@ -159,6 +159,54 @@ function Badge({ children, type = "" }) {
   return <span className={"badge " + type}>{children}</span>;
 }
 
+function recoveryOpportunityScore(event) {
+  const recoveryProbability = Math.max(
+    0,
+    Math.min(1, Number(event.recovery_probability || 0))
+  );
+
+  const amount = Math.max(0, Number(event.amount || 0));
+
+  const customerValue = Math.max(
+    0,
+    Number(event.customer_lifetime_value || 0)
+  );
+
+  const retryCount = Math.max(0, Number(event.retry_count || 0));
+
+  const daysSinceLastPayment = Math.max(
+    0,
+    Number(event.days_since_last_payment || 0)
+  );
+
+  const probabilityScore = recoveryProbability * 45;
+
+  const amountScore = Math.min(amount / 100000, 1) * 25;
+
+  const customerValueScore = Math.min(customerValue / 200000, 1) * 15;
+
+  const recencyScore =
+    Math.max(0, 1 - daysSinceLastPayment / 120) * 10;
+
+  const retryPenalty = Math.min(retryCount / 5, 1) * 15;
+
+  const score = Math.round(
+    probabilityScore +
+      amountScore +
+      customerValueScore +
+      recencyScore -
+      retryPenalty
+  );
+
+  return Math.max(0, Math.min(100, score));
+}
+
+function recoveryOpportunityLabel(score) {
+  if (score >= 80) return "PRIME OPPORTUNITY";
+  if (score >= 60) return "STRONG OPPORTUNITY";
+  if (score >= 40) return "MODERATE OPPORTUNITY";
+  return "LOW OPPORTUNITY";
+}
 function Modal({
   event,
   onClose,
@@ -166,7 +214,77 @@ function Modal({
   paymentLoading,
   paymentMessage,
 }) {
+  const [policy, setPolicy] = useState(null);
+  const [policyLoading, setPolicyLoading] = useState(false);
+
+  useEffect(() => {
+    if (!event?.event_id) {
+      setPolicy(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadPolicy() {
+      setPolicyLoading(true);
+
+      try {
+        const response = await fetch(
+          `${API_URL}/api/events/${event.event_id}/recovery-policy`
+        );
+
+        if (!response.ok) {
+          throw new Error("Unable to load recovery policy");
+        }
+
+        const data = await response.json();
+
+        if (!cancelled) {
+          setPolicy(data.policy || null);
+        }
+      } catch (error) {
+        console.error("Recovery policy error:", error);
+
+        if (!cancelled) {
+          setPolicy(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setPolicyLoading(false);
+        }
+      }
+    }
+
+    loadPolicy();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [event?.event_id]);
+
   if (!event) return null;
+
+  const canAutoRecover =
+    event.recovery_result === "not_attempted" &&
+    policy?.authorization === "auto_recover";
+
+  const policyTone =
+    policy?.verdict === "SAFE TO RECOVER"
+      ? "executed"
+      : policy?.verdict === "HUMAN REVIEW"
+      ? "escalated"
+      : "stopped";
+
+  const authorizationLabel =
+    policyLoading
+      ? "Evaluating policy..."
+      : policy?.authorization === "auto_recover"
+      ? "AUTONOMOUS RECOVERY"
+      : policy?.authorization === "human_review"
+      ? "HUMAN APPROVAL REQUIRED"
+      : policy?.authorization === "blocked"
+      ? "RECOVERY BLOCKED"
+      : "POLICY EVALUATION PENDING";
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -178,25 +296,28 @@ function Modal({
             <div className="muted">{event.event_id}</div>
           </div>
 
-          <button className="close-btn" onClick={onClose}>X
-            
+          <button className="close-btn" onClick={onClose}>
+            X
           </button>
         </div>
 
         <div className="modal-grid">
-<div className="detail-card">
+          <div className="detail-card">
             <span>Revenue at risk</span>
             <strong>{moneyFull(event.amount)}</strong>
           </div>
-<div className="detail-card">
+
+          <div className="detail-card">
             <span>Risk score</span>
             <strong>{event.risk_score.toFixed(1)}</strong>
           </div>
-<div className="detail-card">
+
+          <div className="detail-card">
             <span>Recovery probability</span>
             <strong>{percent(event.recovery_probability * 100)}</strong>
           </div>
-<div className="detail-card">
+
+          <div className="detail-card">
             <span>Recovered amount</span>
             <strong>{moneyFull(event.recovered_amount)}</strong>
           </div>
@@ -253,18 +374,291 @@ function Modal({
         </div>
 
         <div className="modal-section">
-          <h3>AI decision</h3>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: "12px",
+              marginBottom: "12px",
+            }}
+          >
+            <div>
+              <div className="eyebrow">REVIVEAI AGENT</div>
+
+              <h3 style={{ marginBottom: "3px" }}>
+                Agent Decision Center
+              </h3>
+
+              <span
+                style={{
+                  color: "#697486",
+                  fontSize: "9px",
+                }}
+              >
+                Explainable recovery decision and financial safety authorization
+              </span>
+            </div>
+
+            {policy && (
+              <Badge type={policyTone}>
+                {policy.verdict}
+              </Badge>
+            )}
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
+              gap: "5px",
+              marginBottom: "14px",
+            }}
+          >
+            {[
+              ["01", "Detect"],
+              ["02", "Diagnose"],
+              ["03", "Decide"],
+              ["04", "Guard"],
+              ["05", "Execute"],
+              ["06", "Measure"],
+              ["07", "Learn"],
+            ].map(([number, label], index) => (
+              <div
+                key={label}
+                style={{
+                  padding: "8px 4px",
+                  textAlign: "center",
+                  borderRadius: "7px",
+                  background:
+                    index < 4
+                      ? "rgba(101,88,239,0.10)"
+                      : "rgba(255,255,255,0.025)",
+                  border:
+                    index < 4
+                      ? "1px solid rgba(101,88,239,0.25)"
+                      : "1px solid #1b222d",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "8px",
+                    color: "#6558ef",
+                    fontWeight: 700,
+                  }}
+                >
+                  {number}
+                </div>
+
+                <strong
+                  style={{
+                    display: "block",
+                    fontSize: "8px",
+                    marginTop: "4px",
+                    color: "#dfe4ec",
+                  }}
+                >
+                  {label}
+                </strong>
+              </div>
+            ))}
+          </div>
 
           <div className="decision-box">
             <div>
-              <span>Recommended action</span>
+              <span>AI recommendation</span>
               <strong>{actionLabel(event.recommended_action)}</strong>
+            </div>
+
+            <div>
+              <span>Recovery probability</span>
+              <strong>
+                {percent(event.recovery_probability * 100)}
+              </strong>
+            </div>
+
+<div>
+  <span>Recovery opportunity</span>
+  <strong>
+    {recoveryOpportunityScore(event)} — {recoveryOpportunityLabel(recoveryOpportunityScore(event))}
+  </strong>
+</div>
+
+            <div>
+              <span>Risk score</span>
+              <strong>{event.risk_score.toFixed(1)}</strong>
             </div>
 
             <div>
               <span>Recovery result</span>
               <strong>{prettyReason(event.recovery_result)}</strong>
             </div>
+          </div>
+
+          <div
+            style={{
+              marginTop: "10px",
+              padding: "12px",
+              background: "#0a0e13",
+              border: "1px solid #1a212a",
+              borderRadius: "8px",
+            }}
+          >
+            <div
+              style={{
+                color: "#566173",
+                fontSize: "8px",
+                textTransform: "uppercase",
+                letterSpacing: "0.7px",
+              }}
+            >
+              Decision factors
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                gap: "8px",
+                marginTop: "10px",
+              }}
+            >
+              <div>
+                <span>Failure reason</span>
+                <strong>{prettyReason(event.failure_reason)}</strong>
+              </div>
+
+              <div>
+                <span>Retry history</span>
+                <strong>{event.retry_count} previous retry</strong>
+              </div>
+
+              <div>
+                <span>Customer value</span>
+                <strong>{moneyFull(event.customer_lifetime_value)}</strong>
+              </div>
+
+              <div>
+                <span>Payment recency</span>
+                <strong>{event.days_since_last_payment} days</strong>
+              </div>
+            </div>
+          </div>
+
+          <div
+            style={{
+              marginTop: "10px",
+              padding: "12px",
+              background: "#0a0e13",
+              border: "1px solid #1a212a",
+              borderRadius: "8px",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: "12px",
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    color: "#566173",
+                    fontSize: "8px",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.7px",
+                  }}
+                >
+                  Financial safety authorization
+                </div>
+
+                <strong
+                  style={{
+                    display: "block",
+                    marginTop: "6px",
+                    color: "#dfe4ec",
+                    fontSize: "12px",
+                  }}
+                >
+                  {authorizationLabel}
+                </strong>
+              </div>
+
+              {policy && (
+                <strong
+                  style={{
+                    fontSize: "11px",
+                    color:
+                      policy.verdict === "SAFE TO RECOVER"
+                        ? "#5ce4a8"
+                        : policy.verdict === "HUMAN REVIEW"
+                        ? "#f0bd68"
+                        : "#ff6f7d",
+                  }}
+                >
+                  {policy.passed_checks}/{policy.total_checks}
+                </strong>
+              )}
+            </div>
+
+            {policy?.checks && (
+              <div
+                style={{
+                  marginTop: "10px",
+                  display: "grid",
+                  gap: "6px",
+                }}
+              >
+                {policy.checks.map((check) => (
+                  <div
+                    key={check.name}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: "10px",
+                      padding: "7px 8px",
+                      borderRadius: "6px",
+                      background: "#0c1016",
+                    }}
+                  >
+                    <div>
+                      <span
+                        style={{
+                          color: "#9aa4b3",
+                          fontSize: "9px",
+                        }}
+                      >
+                        {check.name}
+                      </span>
+
+                      <small
+                        style={{
+                          display: "block",
+                          marginTop: "3px",
+                          color: "#687385",
+                          fontSize: "8px",
+                        }}
+                      >
+                        {check.detail}
+                      </small>
+                    </div>
+
+                    <strong
+                      style={{
+                        fontSize: "8px",
+                        color: check.passed ? "#5ce4a8" : "#f0bd68",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {check.passed ? "PASS" : "REVIEW"}
+                    </strong>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {event.diagnosis && (
@@ -295,7 +689,7 @@ function Modal({
           <span>Recorded {formatDate(event.timestamp)}</span>
 
           <div style={{ display: "flex", gap: "8px" }}>
-            {event.recovery_result === "not_attempted" && (
+            {canAutoRecover && (
               <button
                 className="primary-btn"
                 onClick={() => onPay(event)}
@@ -318,7 +712,6 @@ function Modal({
     </div>
   );
 }
-
 function Overview({
   summary,
   events,
@@ -3415,6 +3808,7 @@ export default function App() {
   );
 }
 ``
+
 
 
 
