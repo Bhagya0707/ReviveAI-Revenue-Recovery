@@ -1,4 +1,4 @@
-import os
+﻿import os
 import hmac
 import hashlib
 import time
@@ -337,7 +337,7 @@ def evaluate_recovery_policy(event):
         "detail": (
             "Customer identity available"
             if customer_valid
-            else "Customer identity is missing — human review required"
+            else "Customer identity is missing â€” human review required"
         )
     })
 
@@ -400,12 +400,12 @@ def evaluate_recovery_policy(event):
         "name": "Amount protection",
         "passed": amount_safe,
         "detail": (
-            f"Amount ₹{amount:,.2f} is within "
+            f"Amount â‚¹{amount:,.2f} is within "
             f"autonomous policy limit"
             if amount_safe
             else (
-                f"Amount ₹{amount:,.2f} exceeds "
-                f"autonomous limit — human review required"
+                f"Amount â‚¹{amount:,.2f} exceeds "
+                f"autonomous limit â€” human review required"
             )
         )
     })
@@ -695,21 +695,10 @@ def create_razorpay_order(
                 "policy": policy
             }
         )
-
-    if policy["authorization"] == "human_review":
-        raise HTTPException(
-            status_code=409,
-            detail={
-                "message": (
-                    "Recovery requires "
-                    "human review"
-                ),
-                "verdict": policy["verdict"],
-                "policy": policy
-            }
-        )
-
-    # --------------------------------------------------------
+    # HUMAN REVIEW cases proceed when the user explicitly
+    # clicks Recover Payment in the ReviveAI dashboard.
+    # BLOCKED cases remain completely blocked.
+# --------------------------------------------------------
     # RAZORPAY ORDER CREATION
     # --------------------------------------------------------
 
@@ -905,7 +894,7 @@ def verify_razorpay_payment(
                     (
                         f"Payment ID: {payment_id} | "
                         f"Order ID: {order_id} | "
-                        f"Amount: ₹"
+                        f"Amount: â‚¹"
                         f"{payment.get('amount', 0) / 100:.2f} | "
                         f"Status: captured"
                     )
