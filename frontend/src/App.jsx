@@ -1,4 +1,4 @@
-
+﻿
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ResponsiveContainer,
@@ -20,12 +20,12 @@ const API_URL = "https://reviveai-revenue-recovery.onrender.com";
 const RAZORPAY_KEY_ID = "rzp_test_TXAlnoCwvrNzp6";
 
 const NAV_ITEMS = [
-  { id: "overview", icon: "⌂", label: "Overview" },
-  { id: "queue", icon: "☷", label: "Recovery Queue" },
-  { id: "recovered", icon: "✓", label: "Recovered Payments" },
-  { id: "strategy", icon: "↗", label: "Strategy Simulator" },
-  { id: "audit", icon: "◇", label: "Audit & Guardrails" },
-  { id: "analytics", icon: "▥", label: "Analytics" },
+  { id: "overview", icon: "âŒ‚", label: "Overview" },
+  { id: "queue", icon: "â˜·", label: "Recovery Queue" },
+  { id: "recovered", icon: "âœ“", label: "Recovered Payments" },
+  { id: "strategy", icon: "â†—", label: "Strategy Simulator" },
+  { id: "audit", icon: "â—‡", label: "Audit & Guardrails" },
+  { id: "analytics", icon: "â–¥", label: "Analytics" },
 ];
 
 const FALLBACK_SUMMARY = {
@@ -126,7 +126,7 @@ function priorityClass(priority) {
 }
 
 function formatDate(value) {
-  if (!value) return "—";
+  if (!value) return "â€”";
 
   const d = new Date(value);
 
@@ -179,27 +179,71 @@ function Modal({
           </div>
 
           <button className="close-btn" onClick={onClose}>
-            ×
+            Ã—
           </button>
         </div>
 
         <div className="modal-grid">
-          <div className="detail-card">
+          <div className="why-action-card">
+  <div className="eyebrow">DECISION EXPLANATION</div>
+  <h3>Why This Action?</h3>
+  <div className="why-action-grid">
+    <div><span>Failure cause</span><strong>{prettyReason(event.failure_reason)}</strong></div>
+    <div><span>Recovery probability</span><strong>{percent(event.recovery_probability * 100)}</strong></div>
+    <div><span>Recommended intervention</span><strong>{actionLabel(event.recommended_action)}</strong></div>
+    <div><span>Decision status</span><strong>{statusLabel(event.action_status)}</strong></div>
+  </div>
+  <p>The agent combines failure cause, recovery probability, customer history and guardrail conditions before selecting this bounded recovery action.</p>
+</div>
+<div className="detail-card">
             <span>Revenue at risk</span>
             <strong>{moneyFull(event.amount)}</strong>
           </div>
 
-          <div className="detail-card">
+          <div className="why-action-card">
+  <div className="eyebrow">DECISION EXPLANATION</div>
+  <h3>Why This Action?</h3>
+  <div className="why-action-grid">
+    <div><span>Failure cause</span><strong>{prettyReason(event.failure_reason)}</strong></div>
+    <div><span>Recovery probability</span><strong>{percent(event.recovery_probability * 100)}</strong></div>
+    <div><span>Recommended intervention</span><strong>{actionLabel(event.recommended_action)}</strong></div>
+    <div><span>Decision status</span><strong>{statusLabel(event.action_status)}</strong></div>
+  </div>
+  <p>The agent combines failure cause, recovery probability, customer history and guardrail conditions before selecting this bounded recovery action.</p>
+</div>
+<div className="detail-card">
             <span>Risk score</span>
             <strong>{event.risk_score.toFixed(1)}</strong>
           </div>
 
-          <div className="detail-card">
+          <div className="why-action-card">
+  <div className="eyebrow">DECISION EXPLANATION</div>
+  <h3>Why This Action?</h3>
+  <div className="why-action-grid">
+    <div><span>Failure cause</span><strong>{prettyReason(event.failure_reason)}</strong></div>
+    <div><span>Recovery probability</span><strong>{percent(event.recovery_probability * 100)}</strong></div>
+    <div><span>Recommended intervention</span><strong>{actionLabel(event.recommended_action)}</strong></div>
+    <div><span>Decision status</span><strong>{statusLabel(event.action_status)}</strong></div>
+  </div>
+  <p>The agent combines failure cause, recovery probability, customer history and guardrail conditions before selecting this bounded recovery action.</p>
+</div>
+<div className="detail-card">
             <span>Recovery probability</span>
             <strong>{percent(event.recovery_probability * 100)}</strong>
           </div>
 
-          <div className="detail-card">
+          <div className="why-action-card">
+  <div className="eyebrow">DECISION EXPLANATION</div>
+  <h3>Why This Action?</h3>
+  <div className="why-action-grid">
+    <div><span>Failure cause</span><strong>{prettyReason(event.failure_reason)}</strong></div>
+    <div><span>Recovery probability</span><strong>{percent(event.recovery_probability * 100)}</strong></div>
+    <div><span>Recommended intervention</span><strong>{actionLabel(event.recommended_action)}</strong></div>
+    <div><span>Decision status</span><strong>{statusLabel(event.action_status)}</strong></div>
+  </div>
+  <p>The agent combines failure cause, recovery probability, customer history and guardrail conditions before selecting this bounded recovery action.</p>
+</div>
+<div className="detail-card">
             <span>Recovered amount</span>
             <strong>{moneyFull(event.recovered_amount)}</strong>
           </div>
@@ -390,7 +434,7 @@ function Overview({
 
       {!apiConnected && (
         <div className="warning-banner">
-          <span>⚠</span>
+          <span>âš </span>
           Backend connection unavailable. Showing the last known dashboard
           values instead of inventing new data.
         </div>
@@ -398,8 +442,8 @@ function Overview({
 
       <div className="live-data-strip">
         <span className="green-dot" />
-        Live · Demo data active
-        <span className="separator">•</span>
+        Live Â· Demo data active
+        <span className="separator">â€¢</span>
         {events.length} recovery events loaded
       </div>
 
@@ -447,7 +491,7 @@ function Overview({
             className="text-btn"
             onClick={() => onNavigate("strategy")}
           >
-            View simulator →
+            View simulator â†’
           </button>
         </div>
 
@@ -472,7 +516,7 @@ function Overview({
             </div>
           </div>
 
-          <div className="policy-arrow">→</div>
+          <div className="policy-arrow">â†’</div>
 
           <div className="policy-panel optimized">
             <div className="policy-label">AI-OPTIMIZED POLICY</div>
@@ -482,7 +526,7 @@ function Overview({
             </div>
 
             <div className="optimization-note">
-              <span>✦</span>
+              <span>âœ¦</span>
               Uses actual recovery outcomes
             </div>
           </div>
@@ -515,7 +559,7 @@ function Overview({
           </div>
 
           <button className="text-btn" onClick={() => onNavigate("queue")}>
-            View all →
+            View all â†’
           </button>
         </div>
 
@@ -565,55 +609,92 @@ function Overview({
         </div>
       </section>
 
-      <section className="pipeline-card">
-        <div className="section-heading">
-          <div>
-            <div className="eyebrow">RECOVERY PIPELINE</div>
-            <h2>Decision workflow</h2>
-            <p>From risk detection to recovery execution.</p>
-          </div>
-        </div>
+      <section className="strategy-card">
+  <div className="section-heading">
+    <div>
+      <div className="eyebrow">ADAPTIVE LEARNING</div>
+      <h2>Recovery Strategy Performance</h2>
+      <p>Historical outcomes help ReviveAI improve future recovery decisions.</p>
+    </div>
+  </div>
 
-        <div className="pipeline">
-          <div className="pipeline-step">
-            <div className="pipeline-icon">01</div>
-            <strong>Detect</strong>
-            <span>Revenue risk identified</span>
-          </div>
+  <div className="strategy-grid">
+    <div className="strategy-item">
+      <strong>Retry Payment</strong>
+      <span>Observed recovery success</span>
+      <b>50%</b>
+    </div>
+    <div className="strategy-item">
+      <strong>Send Reminder</strong>
+      <span>Observed recovery success</span>
+      <b>44%</b>
+    </div>
+    <div className="strategy-item">
+      <strong>Alternate Method</strong>
+      <span>Observed recovery success</span>
+      <b>53%</b>
+    </div>
+  </div>
+</section>
+<section className="pipeline-card">
+  <div className="section-heading">
+    <div>
+      <div className="eyebrow">REVIVEAI AGENT LOOP</div>
+      <h2>Autonomous recovery workflow</h2>
+      <p>Detect risk, understand the failure, recover safely, and learn from every outcome.</p>
+    </div>
+  </div>
 
-          <div className="pipeline-line" />
+  <div className="pipeline">
+    <div className="pipeline-step">
+      <div className="pipeline-icon">01</div>
+      <strong>Detect</strong>
+      <span>Revenue risk identified</span>
+    </div>
+    <div className="pipeline-line" />
 
-          <div className="pipeline-step">
-            <div className="pipeline-icon">02</div>
-            <strong>Score</strong>
-            <span>Risk & recovery probability</span>
-          </div>
+    <div className="pipeline-step">
+      <div className="pipeline-icon">02</div>
+      <strong>Diagnose</strong>
+      <span>Failure cause analyzed</span>
+    </div>
+    <div className="pipeline-line" />
 
-          <div className="pipeline-line" />
+    <div className="pipeline-step">
+      <div className="pipeline-icon">03</div>
+      <strong>Decide</strong>
+      <span>AI intervention selected</span>
+    </div>
+    <div className="pipeline-line" />
 
-          <div className="pipeline-step">
-            <div className="pipeline-icon">03</div>
-            <strong>Decide</strong>
-            <span>AI intervention selected</span>
-          </div>
+    <div className="pipeline-step">
+      <div className="pipeline-icon">04</div>
+      <strong>Guard</strong>
+      <span>Action validated safely</span>
+    </div>
+    <div className="pipeline-line" />
 
-          <div className="pipeline-line" />
+    <div className="pipeline-step">
+      <div className="pipeline-icon">05</div>
+      <strong>Execute</strong>
+      <span>Recovery action executed</span>
+    </div>
+    <div className="pipeline-line" />
 
-          <div className="pipeline-step">
-            <div className="pipeline-icon">04</div>
-            <strong>Guardrail</strong>
-            <span>Bounded action verified</span>
-          </div>
+    <div className="pipeline-step">
+      <div className="pipeline-icon">06</div>
+      <strong>Measure</strong>
+      <span>Recovery outcome recorded</span>
+    </div>
+    <div className="pipeline-line" />
 
-          <div className="pipeline-line" />
-
-          <div className="pipeline-step">
-            <div className="pipeline-icon">05</div>
-            <strong>Recover</strong>
-            <span>Outcome recorded</span>
-          </div>
-        </div>
-      </section>
+    <div className="pipeline-step">
+      <div className="pipeline-icon">07</div>
+      <strong>Learn</strong>
+      <span>Future decisions improved</span>
+    </div>
+  </div>
+</section>
     </>
   );
 }
@@ -857,7 +938,7 @@ function RecoveredPayments({ payments, loading }) {
                     </td>
 
                     <td>
-                      {payment.event_id || "—"}
+                      {payment.event_id || "â€”"}
                     </td>
 
                     <td>
@@ -869,7 +950,7 @@ function RecoveredPayments({ payments, loading }) {
                       >
                         {payment.payment_id ||
                           payment.razorpay_payment_id ||
-                          "—"}
+                          "â€”"}
                       </small>
                     </td>
 
@@ -1117,7 +1198,7 @@ function Audit({ events }) {
 
         <div className="guardrail-grid">
           <div>
-            <span className="guardrail-icon green-bg">✓</span>
+            <span className="guardrail-icon green-bg">âœ“</span>
 
             <strong>Bounded actions</strong>
 
@@ -1138,7 +1219,7 @@ function Audit({ events }) {
           </div>
 
           <div>
-            <span className="guardrail-icon red-bg">×</span>
+            <span className="guardrail-icon red-bg">Ã—</span>
 
             <strong>Stop conditions</strong>
 
@@ -1741,7 +1822,7 @@ export default function App() {
 
             if (verifyResponse.ok) {
               setPaymentMessage(
-                `✓ Payment recovered successfully — ${response.razorpay_payment_id}`
+                `âœ“ Payment recovered successfully â€” ${response.razorpay_payment_id}`
               );
 
               setPaymentLoading(false);
@@ -3331,3 +3412,10 @@ export default function App() {
   );
 }
 ``
+
+
+
+
+
+
+
