@@ -1,69 +1,148 @@
-# 🚀 ReviveAI – AI Revenue Recovery
+# ReviveAI – AI Revenue Recovery
 
-> An AI-powered revenue recovery agent that detects revenue at risk, recommends the right recovery action, validates it through financial safety guardrails, and executes controlled payment recovery workflows.
+An AI-powered revenue recovery agent that detects at-risk payments, recommends safe recovery actions, and executes controlled payment recovery workflows.
 
-## 🎯 Project Overview
 
-Businesses lose revenue because of failed payments, abandoned transactions, payment issues, and customers who do not complete their payments.
+## Features
 
-The challenge is not just identifying failed payments. The real challenge is deciding:
+- Revenue-at-risk detection
+- AI-powered recovery recommendations
+- Recovery opportunity scoring
+- Financial safety guardrails
+- Human review for sensitive cases
+- Controlled recovery execution
+- Razorpay Test Mode integration
+- Payment verification
+- Persistent recovered-payment records
+- Recovery audit trail
+- Adaptive learning
+- Recovery analytics dashboard
 
-- Which cases are worth recovering?
-- What recovery action should be taken?
-- How confident is the system?
-- When should the AI retry?
-- When should it stop?
-- When should a case require human review?
-- How can every decision and outcome be tracked?
 
-**ReviveAI** solves this by combining AI-powered decision making with financial safety guardrails, controlled execution, payment processing, and persistent recovery tracking.
+## Demo
 
----
+Live Application:
+https://reviveai-dashboard.onrender.com
 
-## 💡 What ReviveAI Solves
 
-ReviveAI identifies revenue at risk and determines the most appropriate recovery strategy for each payment event.
+## Tech Stack
+Frontend: React, Vite, Recharts, Axios
 
-The system can:
+Backend: Python, FastAPI, Uvicorn
 
-1. Detect revenue at risk
-2. Calculate recovery probability
-3. Score recovery opportunities
-4. Analyze payment context
-5. Recommend a recovery action using AI
-6. Validate the recommendation using safety guardrails
-7. Execute approved recovery actions
-8. Stop unsafe or low-confidence actions
-9. Escalate suitable cases for human review
-10. Process recovery payments through Razorpay Test Mode
-11. Verify successful payments
-12. Store recovered payment records persistently
-13. Maintain an audit trail
-14. Measure recovery outcomes
-15. Learn from previous recovery outcomes
+AI: Google Gemini
 
----
+Payments: Razorpay Test Mode
 
-# 🤖 AI Agent Workflow
+Database: SQLite, Supabase PostgreSQL
 
-```text
-Payment Events
-      ↓
-Detect Revenue Risk
-      ↓
-Diagnose Failure Context
-      ↓
-AI Recovery Decision
-      ↓
-Financial Safety Guardrails
-      ↓
- ┌───────────────┬────────────────┐
- ↓               ↓                ↓
-Safe          Human Review      Blocked
- ↓               ↓                ↓
-Execute       Human Approval     Stop
- └───────────────┴────────────────┘
-                  ↓
-          Measure Outcome
-                  ↓
-             Learn & Improve
+Deployment: GitHub, Render
+
+
+## Installation
+Clone the repository and install the required dependencies.
+
+Backend:
+
+cd backend
+pip install -r requirements.txt
+
+Frontend:
+
+cd frontend
+npm install
+    
+## Run Locally
+
+Start the backend:
+
+cd backend
+uvicorn main:app --reload
+
+The backend will run at:
+http://127.0.0.1:8000
+
+In a new terminal, start the frontend:
+
+cd frontend
+npm run dev
+
+Open the local Vite URL shown in the terminal.
+
+
+## Environment Variables
+
+The application requires API credentials for Google Gemini, Razorpay, and Supabase.
+
+Create a `.env` file in the backend directory and add:
+
+GEMINI_API_KEY=your_gemini_api_key
+RAZORPAY_KEY_ID=your_razorpay_key_id
+RAZORPAY_KEY_SECRET=your_razorpay_key_secret
+SUPABASE_URL=your_supabase_url
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+
+Never commit real API keys or secret credentials to GitHub.
+
+
+## Usage/Examples
+
+Run the application locally and open the ReviveAI dashboard.
+
+The dashboard allows you to:
+
+- View revenue at risk
+- Review AI recovery recommendations
+- Check recovery opportunity scores
+- View safety policy decisions
+- Review recovery cases
+- Execute eligible recovery payments
+- Complete payments using Razorpay Test Mode
+- View recovered payments
+- Inspect audit information
+- Monitor recovery performance
+
+Example recovery flow:
+
+Payment Risk → AI Recommendation → Safety Check → Recovery Action → Payment Verification → Recovered Payment
+
+## Deployment
+
+
+The application is deployed using Render.
+
+Frontend:
+https://reviveai-dashboard.onrender.com
+
+Backend API:
+https://reviveai-revenue-recovery.onrender.com
+
+The frontend communicates with the deployed FastAPI backend, while Supabase
+provides persistent storage for recovered payment records.
+
+Razorpay is configured in Test Mode for the payment recovery demonstration.
+
+## Repository
+
+https://github.com/Bhagya0707/ReviveAI-Revenue-Recovery
+## Hackathon
+
+Built for the Razorpay Buildathon 2026.
+
+Track 03 – AI Revenue Recovery
+
+ReviveAI focuses on identifying revenue at risk, selecting the right recovery
+intervention, validating it through financial safety guardrails, and executing
+a controlled recovery workflow.
+
+The project demonstrates how AI can help businesses recover lost revenue while
+keeping financial actions safe, bounded, and auditable.
+## License
+
+
+This project was developed for the Razorpay Buildathon 2026 for demonstration and educational purposes.
+## Authors
+
+
+Bhagya Lakshmi Taddi
+B.Tech – Computer Science and Engineering
