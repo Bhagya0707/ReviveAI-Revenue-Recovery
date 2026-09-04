@@ -16,7 +16,7 @@ import {
   Legend,
 } from "recharts";
 
-const API_URL = "https://reviveai-revenue-recovery.onrender.com";
+const API_URL = "https://reviveai-revenue-recovery.onrender.com";;
 const RAZORPAY_KEY_ID = "rzp_test_TXAlnoCwvrNzp6";
 
 const NAV_ITEMS = [
@@ -207,6 +207,84 @@ function recoveryOpportunityLabel(score) {
   if (score >= 40) return "MODERATE OPPORTUNITY";
   return "LOW OPPORTUNITY";
 }
+function traditionalRecoveryDecision(event) {
+  const retryCount = Math.max(0, Number(event.retry_count || 0));
+  const recoveryProbability = Math.max(
+    0,
+    Math.min(1, Number(event.recovery_probability || 0))
+  );
+
+  const failureReason = String(event.failure_reason || "").toLowerCase();
+
+  const permanentFailure =
+    failureReason.includes("insufficient funds") ||
+    failureReason.includes("expired") ||
+    failureReason.includes("closed") ||
+    failureReason.includes("invalid");
+
+  if (permanentFailure) {
+    return "STOP";
+  }
+
+  if (retryCount < 2 && recoveryProbability >= 0.35) {
+    return "RETRY";
+  }
+
+  return "STOP";
+}
+
+function reviveAIStrategy(event) {
+  const probability = Math.max(
+    0,
+    Math.min(1, Number(event.recovery_probability || 0))
+  );
+
+  const opportunity = recoveryOpportunityScore(event);
+
+  if (event.recovery_result === "recovered") {
+    return "RECOVERED";
+  }
+
+  if (opportunity >= 60 && probability >= 0.35) {
+    return "PURSUE RECOVERY";
+  }
+
+  return "CONTROLLED";
+}
+function adaptiveLearningRate(events, aliases) {
+  const matchingEvents = (events || []).filter((event) => {
+    const action = String(
+      event.recommended_action ||
+      event.ai_recommendation ||
+      event.action ||
+      ""
+    )
+      .trim()
+      .toLowerCase()
+      .replace(/[-\s]+/g, "_");
+
+    return aliases.includes(action);
+  });
+
+  if (matchingEvents.length === 0) {
+    return {
+      rate: null,
+      recovered: 0,
+      total: 0
+    };
+  }
+
+  const recovered = matchingEvents.filter(
+    (event) =>
+      String(event.recovery_result || "").toLowerCase() === "recovered"
+  ).length;
+
+  return {
+    rate: Math.round((recovered / matchingEvents.length) * 100),
+    recovered,
+    total: matchingEvents.length
+  };
+}
 function Modal({
   event,
   onClose,
@@ -266,7 +344,7 @@ function Modal({
 
   const canAutoRecover =
     event.recovery_result === "not_attempted" &&
-    policy?.authorization === "auto_recover";
+    (policy?.authorization === "auto_recover" || policy?.authorization === "human_review");
 
   const policyTone =
     policy?.verdict === "SAFE TO RECOVER"
@@ -278,7 +356,7 @@ function Modal({
   const authorizationLabel =
     policyLoading
       ? "Evaluating policy..."
-      : policy?.authorization === "auto_recover"
+      : (policy?.authorization === "auto_recover" || policy?.authorization === "human_review")
       ? "AUTONOMOUS RECOVERY"
       : policy?.authorization === "human_review"
       ? "HUMAN APPROVAL REQUIRED"
@@ -482,6 +560,16 @@ function Modal({
   <strong>
     {recoveryOpportunityScore(event)} — {recoveryOpportunityLabel(recoveryOpportunityScore(event))}
   </strong>
+</div>
+
+<div>
+  <span>Strategy comparison</span>
+  <strong>
+    Rule-based: {traditionalRecoveryDecision(event)}
+  </strong>
+  <small>
+    ReviveAI: {reviveAIStrategy(event)}
+  </small>
 </div>
 
             <div>
@@ -968,17 +1056,35 @@ function Overview({
     <div className="strategy-item">
       <strong>Retry Payment</strong>
       <span>Observed recovery success</span>
-      <b>50%</b>
+      <b>
+  {(() => {
+    const result = adaptiveLearningRate(events, ["retry_payment", "retry"]);
+    return result.rate === null ? "—" : `${result.rate}%`;
+  })()}
+</b>
     </div>
     <div className="strategy-item">
       <strong>Send Reminder</strong>
       <span>Observed recovery success</span>
-      <b>44%</b>
+      <b>
+  {(() => {
+    const result = adaptiveLearningRate(events, ["send_reminder", "reminder"]);
+    return result.rate === null ? "—" : `${result.rate}%`;
+  })()}
+</b>
     </div>
     <div className="strategy-item">
       <strong>Alternate Method</strong>
       <span>Observed recovery success</span>
-      <b>53%</b>
+      <b>
+  {(() => {
+    const result = adaptiveLearningRate(
+      events,
+      ["suggest_alternate_method", "alternate_method"]
+    );
+    return result.rate === null ? "—" : `${result.rate}%`;
+  })()}
+</b>
     </div>
   </div>
 </section>
@@ -3808,6 +3914,10 @@ export default function App() {
   );
 }
 ``
+
+
+
+
 
 
 
